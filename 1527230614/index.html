@@ -1,0 +1,89 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description"><title>负数进制转换 | 学而知之</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=1.0.0"><link rel="stylesheet" type="text/css" href="https://unpkg.com/normalize.css"><link rel="stylesheet" type="text/css" href="https://unpkg.com/purecss/build/pure-min.css"><link rel="stylesheet" type="text/css" href="https://unpkg.com/purecss/build/grids-responsive-min.css"><link rel="stylesheet" href="https://unpkg.com/font-awesome@4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="https://unpkg.com/jquery/dist/jquery.min.js"></script><link rel="icon" mask="" sizes="any" href="/favicon.ico"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><link rel="alternate" type="application/atom+xml" href="/atom.xml"><script type="text/javascript" src="https://unpkg.com/clipboard/dist/clipboard.min.js"></script><script type="text/javascript" src="https://unpkg.com/toastr/build/toastr.min.js"></script><link rel="stylesheet" href="https://unpkg.com/toastr/build/toastr.min.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">负数进制转换</h1><a id="logo" href="/.">学而知之</a><p class="description"></p></div><div id="nav-menu"><a class="current" href="/."><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about.html"><i class="fa fa-user"> 关于</i></a><a href="/atom.xml"><i class="fa fa-rss"> 订阅</i></a></div></div><div class="pure-g" id="layout"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">负数进制转换</h1><div class="post-meta">2018-05-25<span> | </span><span class="category"><a href="/categories/%E7%AE%97%E6%B3%95/">算法</a></span></div><a class="disqus-comment-count" href="/1527230614/#waline"><span class="waline-comment-count" id="/1527230614/"></span><span> 条评论</span></a><div class="post-content"><h3 id="题目描述">题目描述</h3>
+<p>我们都知道每一个整数都可以用十进制来表示，从右往左起，第k个数权重是<span
+class="math inline">\(10^k\)</span>，比如：9527实际上表示的值是 <span
+class="math display">\[9527=9*10^3+5*10^2+2*10^1+7*10^0\]</span>
+我们现在引入负数进制，比如-10进制，在该进制的表示下由于: <span
+class="math display">\[9527=1*(-10)^4+1*(-10)^3+6*(-10)^2+8*(-10)^1+7*(-10)^0\]</span>
+十进制9527在负十进制下的表示就是11687。现在给定任意一个整数N，和进制数R，请计算N在R进制下的表示形式。其中<span
+class="math inline">\(−20&lt;=R&lt;=−2\)</span> 或 <span
+class="math inline">\(2&lt;=R&lt;=20\)</span>
+，由于R的绝对值可能大于10，我们用类似十六进制表示法：A表示10，B表示11，C表示12，...</p>
+<h3 id="输入">输入：</h3>
+<p>一行数据2个整数，N和R，用空格间隔，(<span
+class="math inline">\(−1000000&lt;=N&lt;=1000000\)</span>，<span
+class="math inline">\(−20&lt;=R&lt;=−2\)</span> 或 <span
+class="math inline">\(2&lt;=R&lt;=20\)</span>）</p>
+<h3 id="输出">输出：</h3>
+<p>N在R进制下的表示</p>
+<h3 id="样例输入">样例输入：</h3>
+<p><code> 10086 -16 </code></p>
+<h3 id="样例输出">样例输出：</h3>
+<p><code> 1E8A6 </code></p>
+<p>解释：<span
+class="math inline">\(10086=1*(-16)^4+14*(-16)^3+8*(-16)^2+10*(-16)^1+6*(-16)^0\)</span></p>
+<h3 id="分析">分析：</h3>
+<p>当我第一次看到这个题目时，心里就产生一个疑问，如果 <span
+class="math inline">\(R\)</span>
+小于零，这种表示一定存在吗，如果存在那么表示的形式是唯一的吗？存在性可以用数学归纳法证明，唯一性可以用经典的反证法证明。</p>
+<h3 id="解决问题">解决问题：</h3>
+<p>既然表示形式唯一，如果我们可以找到一种方法计算最末尾的数字，那么如何计算高位上的数字就是递归子问题，当递归终止时，我们就计算出了所有位。
+现在的问题就转换成了如何计算 <span class="math inline">\(N\)</span> 在
+<span class="math inline">\(R\)</span> 进制表示下最末尾的数字。由于在
+<span class="math inline">\(R\)</span> 进制下，每一位上的数字 <span
+class="math inline">\(k\)</span> 必须满足 <span
+class="math inline">\(0&lt;=k&lt;|R|\)</span>，如果 <span
+class="math inline">\(R\)</span> 大于零，<span
+class="math inline">\(N\)</span> 用 <span
+class="math inline">\(R\)</span> 进制表示时，最末尾的数字就是 <span
+class="math inline">\(N \% R\)</span>。但是如果 <span
+class="math inline">\(R\)</span> 是负数，计算机计算的 <span
+class="math inline">\(N \% R\)</span>
+也是负数，这不符合条件，需要一次转换，将其转换到 <span
+class="math inline">\(0\)</span> 到 <span class="math inline">\(|R| −
+1\)</span> 之间才行。令 <span class="math inline">\(k = N \% R\)</span>
+分下列 2 种情况考虑：</p>
+<ol type="1">
+<li>当<span class="math inline">\(k\)</span>满足条件<span
+class="math inline">\(0&lt;=k&lt;|R|\)</span>时，则<span
+class="math inline">\(N=x∗R+k\)</span>，所以<span
+class="math inline">\(k\)</span>就是R进制最末尾的数字，而<span
+class="math inline">\(x\)</span>在R进制下的表示是递归子问题。</li>
+<li>当<span class="math inline">\(k\)</span>满足条件<span
+class="math inline">\(−|R|&lt;k&lt;0\)</span>时，说明<span
+class="math inline">\(R&lt;0\)</span>，则<span
+class="math inline">\(R&lt;k&lt;0\)</span>，有如下等式： <span
+class="math display">\[
+\begin{align}
+N&amp;=x∗R+k \\
+N&amp;=x∗R+R−R+k \\
+N&amp;=(x+1)*R+(k−R)
+\end{align}
+\]</span> 其中<span
+class="math inline">\(0&lt;k−R&lt;|R|\)</span>，<span
+class="math inline">\(k−R\)</span>是R进制下的最末尾数字，而<span
+class="math inline">\(x+1\)</span>在R进制下的表示是递归子问题。
+由于<span class="math inline">\(|x+1| &lt;
+|N|\)</span>，所以经过每一次递归（或者迭代），<span
+class="math inline">\(N\)</span>
+的绝对值是下降的，所以算法一定会终止。</li>
+</ol>
+<p>当我们计算从低位向高位计算出所有位之后，再将结果逆序输出就是最终的答案了。</p>
+<p>代码如下： <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="type">const</span> <span class="type">char</span> *arr = <span class="string">&quot;0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ&quot;</span>;</span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="type">int</span> N = <span class="number">0</span>;</span><br><span class="line">    <span class="type">int</span> R = <span class="number">0</span>;</span><br><span class="line">    <span class="type">int</span> i = <span class="number">0</span>;</span><br><span class="line">    <span class="type">char</span> result[<span class="number">1000</span>];</span><br><span class="line">    <span class="built_in">scanf</span>(<span class="string">&quot;%d%d&quot;</span>, &amp;N, &amp;R);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (N == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;0\n&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (N != <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="type">int</span> y = N%R;</span><br><span class="line">        <span class="keyword">if</span> (y &gt;= <span class="number">0</span>) &#123;</span><br><span class="line">            result[i++] = arr[y];</span><br><span class="line">            N = N/R;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            result[i++] = arr[y-R];</span><br><span class="line">            N = N/R + <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (--i &gt;= <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;%c&quot;</span>, result[i]);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+</div><div class="tags"><ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E7%AE%97%E6%B3%95/" rel="tag">算法</a></li></ul></div><div class="post-nav"><a class="pre" href="/1527389626/">Poj 3922 解法</a></div><div class="nofancybox" id="waline"></div><link rel="stylesheet" type="text/css" href="https://unpkg.com/@waline/client@v3/dist/waline.css"><script type="module">import {init} from 'https://unpkg.com/@waline/client@v3/dist/waline.js';
+init({
+  el: '#waline',
+  comment: true,
+  serverURL: 'https://cmts.wangyulong.cn',
+  pageSize: '30',
+  wordLimit: '500',
+  requiredMeta,
+  emoji: [
+    '//unpkg.com/@waline/emojis@1.2.0/weibo',
+    '//unpkg.com/@waline/emojis@1.2.0/qq',
+    '//unpkg.com/@waline/emojis@1.2.0/tw-emoji',
+  ],
+});</script><script>let metaInfo = ['nick', 'mail', 'link']
+let requiredMeta = ''.split(',').filter(item => {
+  return metaInfo.indexOf(item) > -1
+})
+</script></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form class="search-form" action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="http://www.wangyulong.cn"/></form></div><div class="widget"><div class="author-info"><a class="info-avatar" href="/about.html" title="关于"><img class="nofancybox" src="/img/avatar.png"/></a><p>To be a better man.</p><a class="info-icon" href="https://twitter.com/null" title="Twitter" target="_blank" style="margin-inline:5px"> <i class="fa fa-twitter-square" style="margin-inline:5px"></i></a><a class="info-icon" href="mailto:ipjmcp@gmail.com" title="Email" target="_blank" style="margin-inline:5px"> <i class="fa fa-envelope-square" style="margin-inline:5px"></i></a><a class="info-icon" href="https://github.com/wylazy" title="Github" target="_blank" style="margin-inline:5px"> <i class="fa fa-github-square" style="margin-inline:5px"></i></a><a class="info-icon" href="/atom.xml" title="RSS" target="_blank" style="margin-inline:5px"> <i class="fa fa-rss-square" style="margin-inline:5px"></i></a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/LevelDB/">LevelDB</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/Linux/">Linux</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD/">人工智能</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%95%B0%E5%AD%A6/">数学</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%AE%97%E6%B3%95/">算法</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/%E7%AE%97%E6%B3%95/" style="font-size: 15px;">算法</a> <a href="/tags/MySQL/" style="font-size: 15px;">MySQL</a> <a href="/tags/%E6%95%B0%E5%AD%A6/" style="font-size: 15px;">数学</a> <a href="/tags/Word2Vec/" style="font-size: 15px;">Word2Vec</a> <a href="/tags/Linux/" style="font-size: 15px;">Linux</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/1761284676/">Linux SSH 封禁多次登录失败 IP</a></li><li class="post-list-item"><a class="post-list-link" href="/1734076558/">从头编写 Skip-Gram Word2Vec</a></li><li class="post-list-item"><a class="post-list-link" href="/1688195692/">最长回文子串</a></li><li class="post-list-item"><a class="post-list-link" href="/1659146474/">线性规划单纯形法</a></li><li class="post-list-item"><a class="post-list-link" href="/1527838601/">多项式插值</a></li><li class="post-list-item"><a class="post-list-link" href="/1587210716/">Poj 2663 Tri Tiling</a></li><li class="post-list-item"><a class="post-list-link" href="/1534732562/">编写 MySQL 插件</a></li><li class="post-list-item"><a class="post-list-link" href="/1534732376/">MySQL 复制中对 Load Data的处理（译）</a></li><li class="post-list-item"><a class="post-list-link" href="/1534731278/">MySQL 复制协议</a></li><li class="post-list-item"><a class="post-list-link" href="/1534730601/">MySQL 5.6 中Binlog Group Commit 实现</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-comment-o"> 最近评论</i></div><div id="widget-waline-list"></div><script type="text/javascript" id="recent-comment" serverURL="https://cmts.wangyulong.cn" count="10" src="/js/recent-comments.js?v=1.0.0" async="async"></script></div><div class="widget"><div class="widget-title"><i class="fa fa-external-link"> 常用链接</i></div><ul></ul><a href="/online-tools" title="在线工具" target="_blank">在线工具</a><ul></ul><a href="/generate-password" title="密码生成" target="_blank">密码生成</a><ul></ul><a href="/webnav/" title="导航页面" target="_blank">导航页面</a></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2025 <a href="/." rel="nofollow">学而知之.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a class="show" id="rocket" href="#top"></a><script type="text/javascript" src="/js/totop.js?v=1.0.0" async></script><script type="text/javascript" src="https://unpkg.com/@fancyapps/fancybox/dist/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=1.0.0" async></script><link rel="stylesheet" type="text/css" href="https://unpkg.com/@fancyapps/fancybox/dist/jquery.fancybox.min.css"><script type="text/javascript" src="/js/copycode.js?v=1.0.0" successtext="复制成功！"></script><link rel="stylesheet" type="text/css" href="/css/copycode.css?v=1.0.0"><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" async></script><script type="text/javascript" src="/js/codeblock-resizer.js?v=1.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=1.0.0"></script></div></body></html>

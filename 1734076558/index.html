@@ -1,0 +1,218 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description"><title>从头编写 Skip-Gram Word2Vec | 学而知之</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=1.0.0"><link rel="stylesheet" type="text/css" href="https://unpkg.com/normalize.css"><link rel="stylesheet" type="text/css" href="https://unpkg.com/purecss/build/pure-min.css"><link rel="stylesheet" type="text/css" href="https://unpkg.com/purecss/build/grids-responsive-min.css"><link rel="stylesheet" href="https://unpkg.com/font-awesome@4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="https://unpkg.com/jquery/dist/jquery.min.js"></script><link rel="icon" mask="" sizes="any" href="/favicon.ico"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><link rel="alternate" type="application/atom+xml" href="/atom.xml"><script type="text/javascript" src="https://unpkg.com/clipboard/dist/clipboard.min.js"></script><script type="text/javascript" src="https://unpkg.com/toastr/build/toastr.min.js"></script><link rel="stylesheet" href="https://unpkg.com/toastr/build/toastr.min.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">从头编写 Skip-Gram Word2Vec</h1><a id="logo" href="/.">学而知之</a><p class="description"></p></div><div id="nav-menu"><a class="current" href="/."><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about.html"><i class="fa fa-user"> 关于</i></a><a href="/atom.xml"><i class="fa fa-rss"> 订阅</i></a></div></div><div class="pure-g" id="layout"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">从头编写 Skip-Gram Word2Vec</h1><div class="post-meta">2024-12-13<span> | </span><span class="category"><a href="/categories/%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD/">人工智能</a></span></div><a class="disqus-comment-count" href="/1734076558/#waline"><span class="waline-comment-count" id="/1734076558/"></span><span> 条评论</span></a><div class="post-content"><h3 id="摘要">摘要</h3>
+<p>本文介绍了 Word2Vec 的相关背景知识，以及背后的数学原理，并通过 Python
+源码实现 Skip-Gram 以及负采样方法。 本文并不会涉及 Word2Vec
+的所有方面，而是从 Skip-Gram 入手，关注 Word2Vec
+最核心的思想，从头开始实现一个精简版的 Skip-Gram Word2Vec。
+对于算法的优化本文只会略微提及，感兴趣的读者可以自行阅读相关文献，或者原版的
+Word2Vec 源码。</p>
+<h3 id="背景">背景</h3>
+<p>Word2Vec 是谷歌出品，自发布以引起了广泛的关注，论文引用次数已经达到了
+4 万多次。 第一篇论文 <em>Efficient Estimation of word Representations
+in vector Space</em> 对比了多种模型，并且引入了 CBOW 和 Skip-Gram 2 种
+Word2Vec 模型。 Word2Vec
+模型和神经网络模型相比，最大的优势加速了计算，据论文描述，单台机器每天可以训练
+1000 亿个单次。 而且通过对比发现 Skip-Gram 模型在语义理解方面表现要比
+CBOW 更好。 第二篇论文 <em>Distributed Representations of Words and
+Phrases and their Compositionality</em> 重点介绍的也是 Skip-Gram
+模型，提出了层次 SoftMax 以及负采样和 SubSample 优化方法。 本文将只关注
+Skip-Gram 和负采样，并用 Python 源码实现该功能。</p>
+<h3 id="单词的表示">单词的表示</h3>
+<p>首先分析一下，不使用
+Word2Vec，直接使用神经网络训练词向量的方法以及问题。
+通常单词使用字符串表示，但神经网络只能接收浮点型向量，不能接收字符串，所以得换一种表示方式。
+一种简单的方式是使用 One-Hot 编码，这种方式可以把单词表示为向量。
+具体的做法是，先构建一个词表，词表的大小就是向量的长度，用将单词在词表的下标位置设置为
+1，其他位置设置为 0。 比如词表大小为 6，构建的词表为
+<code>[the, dog, is, walking, in, park]</code> 对于第一个单词
+<code>dog</code> 的 One-Hot 编码为 <span class="math inline">\([0, 1, 0,
+0, 0, 0]\)</span> 。 第二个单词 <code>is</code> 的 One-Hot 编码为 <span
+class="math inline">\([0, 0, 1, 0, 0, 0]\)</span> 。</p>
+<p><img src='../images/1734076558.one-hot.png'></p>
+<h3 id="网络结构">网络结构</h3>
+<p>这里以最简单的例子说明：只考虑连续的 2 个单词，输入为第一个单词的
+One-Hot 表示，输出为第二个单词的 One-Hot 概率分布，构建一个 3
+层的神经网络。 仍以上面的词表为例，那么输入和输出的 One-Hot 向量长度就是
+<span class="math inline">\(6\)</span>, 隐藏层的个数为 <span
+class="math inline">\(2\)</span>，同时隐藏层不使用激活函数，只在最终的输出层后面使用
+SoftMax 激活，生成输出词的 One-Hot 概率分布。
+损失函数使用神经网络的输出和真实词 One-Hot 编码的 CrossEntropy。</p>
+<p><img src='../images/1734076558.fwd.png'></p>
+<p>可能有人要产生疑问了，既然隐藏层没有激活函数，实际上第三层的 <span
+class="math inline">\(\mathbf{y}\)</span> 直接就相当于对输入层 <span
+class="math inline">\({\mathbf{x}}\)</span>
+做线性变换，隐藏层还有什么存在的必要呢？</p>
+<p><span class="math display">\[
+\mathbf{y=b \cdot W = (x \cdot V) \cdot W = x \cdot (V \cdot W)}
+\]</span></p>
+<p>实际上 Word2Vec 就是要训练隐藏层，把隐藏层的输出 <span
+class="math inline">\(\mathbf{b}\)</span>
+当作单词的向量表示，可以理解为其实就是在做矩阵分解。</p>
+<h3 id="时间复杂度分析">时间复杂度分析</h3>
+<p>假设词表大小为 <span class="math inline">\(N\)</span>，隐藏层大小为
+<span class="math inline">\(B\)</span>。那么输入词向量长度为 <span
+class="math inline">\(N\)</span>；矩阵 <span
+class="math inline">\(\mathbf{V}\)</span> 的大小为 <span
+class="math inline">\(N \times B\)</span>，即 <span
+class="math inline">\(N\)</span> 行 <span
+class="math inline">\(B\)</span> 列；矩阵 <span
+class="math inline">\(\mathbf{W}\)</span> 的大小为 <span
+class="math inline">\(B \times N\)</span>, 即 <span
+class="math inline">\(B\)</span> 行, <span
+class="math inline">\(N\)</span> 列。</p>
+<p>第一层是输入，无需计算。</p>
+<p>第二层的计算 <span class="math inline">\(\mathbf{b = x \cdot
+V}\)</span> ，对于常规的矩阵计算，时间复杂度为 <span
+class="math inline">\(N \times B\)</span>，由于输入向量是 One-Hot
+编码，相当于直接从 <span class="math inline">\(\mathbf{V}\)</span>
+中取出第 <span class="math inline">\(k\)</span> 行，时间复杂度为 <span
+class="math inline">\(O(1)\)</span>。</p>
+<p>第三层的计算 <span class="math inline">\(\mathbf{y = b \cdot
+W}\)</span>，由于 <span class="math inline">\(\mathbf{b}\)</span> 和
+<span class="math inline">\(\mathbf{W}\)</span>
+都是稠密向量，无法优化，计算的时间复杂度为 <span class="math inline">\(B
+\times N\)</span>。</p>
+<p>可以发现第一层和第二层的计算开销可忽略不计，最关键的是第三层的计算开销。
+如果词表大小达到百万量级，隐藏层达到 <span
+class="math inline">\(1000\)</span>
+维的话，单是训练一个单词，计算量就达到了 <span
+class="math inline">\(10^3 \times 10^6 =
+10^9\)</span>，而语料库中的单词可能达到数十亿以上。
+这种时间复杂度对于训练整个语料库几乎是不可行的，需要进行优化。</p>
+<p>在 Word2Vec 中，提到了 2 种优化的方法：层次化 SoftMax 和
+负采样。由于层次化 SoftMax
+实现起来更加复杂，而且优化效果也不如负采样，本文重点儿阐述负采样方法。</p>
+<h3 id="层次化-softmax">层次化 SoftMax</h3>
+<p>层次化 SoftMax
+方法构建了一颗哈夫曼树，在训练的过程中使用贪心方式沿着二叉树路径从上到下做二分类，最终遍历到叶子节点，也就是概率最大的词。
+该方法可以将时间复杂度降低为 <span class="math inline">\(B \times
+log(N)\)</span>。</p>
+<h3 id="负采样">负采样</h3>
+<p>使用负采样方法时，神经网络的输入为一个词的 One-Hot
+编码，输出层不再使用 SoftMax，而是使用 Sigmoid 做二分类。
+仍然以上面的词表为例，假设有这样一条样本：第一个词为
+<code>dog</code>，第二个词为
+<code>is</code>，把在原始训练中的样本称为正样本。 由于 <code>dog</code>
+在词表中的下标为 <span
+class="math inline">\(1\)</span>，那么神经网络的输入就是向量 <span
+class="math inline">\([0,1,0,0,0,0]\)</span>；<code>is</code>
+在词表中的下标为 <span
+class="math inline">\(2\)</span>，在训练的时候，在输出层只计算 <span
+class="math inline">\(z_2 = Sigmoid(y_2)\)</span>，把 <span
+class="math inline">\(z_2\)</span> 的当成是输出为 <code>is</code>
+的概率。 我们希望 <span class="math inline">\(z_2\)</span> 尽可能的接近
+<span class="math inline">\(1\)</span>，损失函数为 <span
+class="math inline">\(z_2\)</span> 和 <span
+class="math inline">\(1\)</span> 的 CrossEntropy。</p>
+<p><img src='../images/1734076558.neg.png'></p>
+<p>如此一来，训练的开销会大大降低，但是也丢失了一些信息，需要加入一些负样本。
+负样本的生成方法是随机生成，原始的 Word2Vec
+方法是按照词频的概率生成负样本，本文为了简单起见，使用的是均匀分布生成负样本。
+比如对于第一个词 <code>dog</code>，随机生成的下一个词是
+<code>park</code>，把这条训练数据当作负样本。 由于 <code>park</code>
+在词表的下标为 <span
+class="math inline">\(5\)</span>，神经网络在输出层只计算 <span
+class="math inline">\(z_5=Sigmoid(y_5)\)</span>，把 <span
+class="math inline">\(z_5\)</span> 的当成是输出为 <code>park</code>
+的概率。 由于是负样本，我们希望 <span class="math inline">\(z_5\)</span>
+尽可能的接近 <span class="math inline">\(0\)</span>，损失函数为 <span
+class="math inline">\(z_5\)</span> 和 <span
+class="math inline">\(0\)</span> 的 CrossEntropy。</p>
+<p>对于每条正样本，同时构造生成 <span class="math inline">\(K\)</span>
+条负样本，对于每条训练样本，第三层的时间复杂度为 <span
+class="math inline">\(O(K \times B)\)</span>，这里 <span
+class="math inline">\(K\)</span> 是超参数。 <span
+class="math inline">\(K\)</span> 可以取 <span
+class="math inline">\(10\)</span> 左右，而 <span
+class="math inline">\(B\)</span> 取到 <span
+class="math inline">\(1000\)</span>
+也足够了，训练一个单词的开销比原始的方法下降了好几个数量级，更具备可操作性。
+谷歌的论文提到单台机器每天可训练千亿个词。</p>
+<h3 id="skip-gram">Skip-Gram</h3>
+<p>前面的介绍只是为了便于理解，简化后的场景。 实际上 Skip-Gram
+的做法是：给定一个单词，需要预测其周围 <span class="math inline">\(2
+\times c\)</span> 个单词的概率，即这个单词之前的 <span
+class="math inline">\(c\)</span> 个词以及之后的 <span
+class="math inline">\(c\)</span>
+个词，而且不考虑单词之间的顺序，以及单词和中心词的距离。
+假设语料库中有一句话是
+<code>the dog is walking in the park</code>，当前中心词是
+<code>is</code>，<span class="math inline">\(c\)</span> 等于
+2，那么就有三条正样本：</p>
+<figure class="highlight hy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">(<span class="name"><span class="built_in">is</span></span>, the)</span><br><span class="line">(<span class="name"><span class="built_in">is</span></span>, dog)</span><br><span class="line">(<span class="name"><span class="built_in">is</span></span>, walking)</span><br><span class="line">(<span class="name"><span class="built_in">is</span></span>, in)</span><br></pre></td></tr></table></figure>
+<p>以下开始实战部分，通过 Python 代码以及 numpy 库实现一个简化版的
+Word2Vec。</p>
+<h3 id="数据准备">数据准备</h3>
+<p>这里的数据集使用原版的 Word2Vec 用到的数据集。 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">wget http://mattmahoney.net/dc/text8.zip -O text8.gz</span><br><span class="line">gzip -d text8.gz -f</span><br></pre></td></tr></table></figure></p>
+<h3 id="语料库解析">语料库解析</h3>
+<p>语料库中就是一个接一个的单词，但是这个语料库中没有句子的分隔符。以下代码把它们当成一句话来处理了。为了便于测试，可以在解析时支持指定最大的单词个数，本例中指定单词个数为
+10000。 在解析时需要将单词转换为整数，这个整数就是单词在词表中的下标。
+比如语料库为：<code>the dog is walking in the park</code>，词表为：<code>[the, dog, is, walking, in, park]</code>，输出的
+Tokens 为 <code>[0, 1, 2, 3, 4, 0, 5]</code></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python</span></span><br><span class="line"><span class="comment">#-*- coding:utf-8 -*-</span></span><br><span class="line"></span><br><span class="line">max_words_size = <span class="number">10000</span></span><br><span class="line">data_map = &#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">read_tokens</span>():</span><br><span class="line">    tokens = []</span><br><span class="line">    <span class="keyword">with</span> <span class="built_in">open</span>(<span class="string">&#x27;text8&#x27;</span>) <span class="keyword">as</span> f:</span><br><span class="line">        content = f.read()</span><br><span class="line">        word = []</span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, <span class="built_in">len</span>(content)):</span><br><span class="line">            <span class="keyword">if</span> content[i].isspace():</span><br><span class="line">                <span class="keyword">if</span> <span class="built_in">len</span>(word) &gt; <span class="number">0</span>:</span><br><span class="line">                    k = <span class="string">&#x27;&#x27;</span>.join(word)</span><br><span class="line">                    <span class="keyword">if</span> k <span class="keyword">in</span> data_map:</span><br><span class="line">                        v = data_map[k]</span><br><span class="line">                    <span class="keyword">else</span>:</span><br><span class="line">                        v = <span class="built_in">len</span>(data_map)</span><br><span class="line">                        data_map[k] = v</span><br><span class="line">                    tokens.append(v) <span class="comment"># 将单词作为 Token</span></span><br><span class="line">                    word = []</span><br><span class="line">            <span class="keyword">else</span>:</span><br><span class="line">                word.append(content[i])</span><br><span class="line">            <span class="comment"># 最大读取单词个数为 max_words_size</span></span><br><span class="line">            <span class="keyword">if</span> <span class="built_in">len</span>(tokens) &gt;= max_words_size:</span><br><span class="line">                <span class="keyword">break</span></span><br><span class="line">    <span class="keyword">return</span> tokens</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h3 id="构建训练正样本">构建训练正样本</h3>
+<p>首先枚举每一个单词作为中心词，然后再枚举周围词，作为正样本。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">get_skip_gram_pairs</span>(<span class="params">tokens, window</span>):</span><br><span class="line">    pairs = []</span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(tokens)): <span class="comment"># 枚举中心词</span></span><br><span class="line">        <span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">max</span>(<span class="number">0</span>, i - window), <span class="built_in">min</span>(<span class="built_in">len</span>(tokens), i + window + <span class="number">1</span>)): <span class="comment"># 枚举周围词</span></span><br><span class="line">            <span class="keyword">if</span> j == i:</span><br><span class="line">                <span class="keyword">continue</span></span><br><span class="line">            <span class="comment"># 添加元组（中心词_id，周围词_id）</span></span><br><span class="line">            pairs.append((tokens[i], tokens[j]))</span><br><span class="line">    <span class="keyword">return</span> pairs</span><br></pre></td></tr></table></figure>
+<h3 id="梯度更新">梯度更新</h3>
+<p>这里没有使用机器学习框架，也没有自动微分功能，需要推导梯度更新公式。
+损失函数为 <span class="math inline">\(\sigma(y)\)</span> 和真实值之间的
+CrossEntropy。 <span class="math display">\[
+  L = −[label*log(\sigma(y))+(1−label)log(1−\sigma(y))]
+\]</span></p>
+<p>其中 <span class="math inline">\(\displaystyle \sigma(y) =
+\frac{1}{1+e^{-y}}\)</span>，<span class="math inline">\(\displaystyle
+\frac{\mathrm{d}}{\mathrm{d} y} log(\sigma(y)) =
+1-\sigma(y)\)</span>，<span class="math inline">\(label\)</span>
+的取值只能是 <span class="math inline">\(0\)</span> 或者 <span
+class="math inline">\(1\)</span>。</p>
+<p>当 <span class="math inline">\(label\)</span> 取值为 <span
+class="math inline">\(1\)</span> 时： <span class="math display">\[
+\begin{align}
+L_+ &amp;= -\log(\sigma(y)) \\
+\frac{\partial L_+}{\partial y} &amp;= \sigma(y) - 1 \\
+\end{align}
+\]</span> 当 <span class="math inline">\(label\)</span> 取值为 <span
+class="math inline">\(0\)</span> 时： <span class="math display">\[
+\begin{align}
+L_- &amp;= -\log[1 - \sigma(y)] \\
+\frac{\partial L_-}{\partial y} &amp;= \sigma(y) - 0 \\
+\end{align}
+\]</span> 综合起来，可以得到输出层的梯度公式： <span
+class="math display">\[
+\begin{align}
+\frac{\partial L}{\partial y} &amp;= \sigma(y) - label \\
+\end{align}
+\]</span> 而之前层的网络参数，可以通过反向传播算法更新梯度计算。</p>
+<h3 id="模型训练">模型训练</h3>
+<p>这里使用随机梯度下降以及反向传播训练模型。 需要定义 <span
+class="math inline">\(2\)</span> 个变量 <span
+class="math inline">\(embed\_in\)</span> 和 <span
+class="math inline">\(embed\_out\)</span>
+来存储网络模型参数，分别对应之前介绍的矩阵 <span
+class="math inline">\(V\)</span> 和矩阵 <span
+class="math inline">\(W\)</span>。 输入为中心词的下标假设为 <span
+class="math inline">\(s\)</span>，当前预测的周围词下标为 <span
+class="math inline">\(t\)</span>。 第二层的输出直接就是 <span
+class="math inline">\(embed\_in[s]\)</span>，第三层的输出为 <span
+class="math inline">\(y = embed\_in[s] \cdot embed\_out[t]\)</span></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">import</span> math</span><br><span class="line"><span class="keyword">import</span> random</span><br><span class="line"></span><br><span class="line">hidden_dim = <span class="number">4</span></span><br><span class="line">vocab_size = <span class="number">0</span></span><br><span class="line">embed_in = <span class="literal">None</span></span><br><span class="line">embed_out = <span class="literal">None</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">soft_max</span>(<span class="params">x</span>):</span><br><span class="line">    <span class="keyword">return</span> <span class="number">1.0</span> / (<span class="number">1</span> + math.exp(-x))</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">train</span>(<span class="params">pairs</span>):</span><br><span class="line">    learning_rate = <span class="number">1e-4</span></span><br><span class="line">    <span class="keyword">for</span> epoch <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">3</span>):</span><br><span class="line">        <span class="keyword">for</span> p <span class="keyword">in</span> pairs:</span><br><span class="line">            <span class="comment"># 第一个为正样本，之后的是构造的负样本</span></span><br><span class="line">            examples = [(<span class="number">1</span>, p[<span class="number">1</span>])]</span><br><span class="line">            <span class="comment"># 这里写死构造 8 个负样本</span></span><br><span class="line">            <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">8</span>):</span><br><span class="line">                j = random.randrange(<span class="number">0</span>, vocab_size) <span class="comment"># 随机选一个词当负样本</span></span><br><span class="line">                <span class="keyword">while</span> j == p[<span class="number">1</span>]: <span class="comment"># 由于 p[1] 是正样本，随机选其他词</span></span><br><span class="line">                    j = random.randrange(<span class="number">0</span>, vocab_size)</span><br><span class="line">                examples.append((<span class="number">0</span>, j))</span><br><span class="line">            <span class="comment"># 遍历样本，使用梯度下降更新参数值</span></span><br><span class="line">            <span class="keyword">for</span> examp <span class="keyword">in</span> examples:</span><br><span class="line">                label = examp[<span class="number">0</span>] <span class="comment"># label 为 1 表示当前为正样本，label 为 0 表示当前为负样本</span></span><br><span class="line">                <span class="comment"># 这里 x0 和 x1 就是词的 Embedding，通过梯度下降算法自动更新求解</span></span><br><span class="line">                x0 = embed_in[p[<span class="number">0</span>]] <span class="comment"># p[0] 是中心词_id</span></span><br><span class="line">                x1 = embed_out[examp[<span class="number">1</span>]] <span class="comment"># examp[1] 是周围词_id</span></span><br><span class="line">                y = np.dot(x0, x1) <span class="comment"># 计算 Embedding 的内积</span></span><br><span class="line">                g = (soft_max(y) - label) * learning_rate <span class="comment"># 计算梯度，learning_rate 是超参数学习率</span></span><br><span class="line">                tmp0 = x0.copy() <span class="comment"># 保留原来的 x0</span></span><br><span class="line">                x0 -= g * x1 <span class="comment"># 反向传播，梯度下降，更新 x0</span></span><br><span class="line">                x1 -= g * tmp0 <span class="comment"># 反向传播，梯度下降，更新 x1</span></span><br><span class="line">    nc = <span class="number">0</span></span><br><span class="line">    <span class="keyword">for</span> k,v <span class="keyword">in</span> data_map.items():</span><br><span class="line">        <span class="built_in">print</span>(k, embed_in[v])</span><br><span class="line">        nc += <span class="number">1</span></span><br><span class="line">        <span class="keyword">if</span> nc &gt; <span class="number">5</span>:</span><br><span class="line">            <span class="keyword">break</span></span><br></pre></td></tr></table></figure>
+<h3 id="主流程">主流程</h3>
+<p>将之前的代码组合起来，形成完成代码。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">main</span>():</span><br><span class="line">    <span class="keyword">global</span> vocab_size, embed_in, embed_out</span><br><span class="line">    <span class="comment"># 1. 读入语料库</span></span><br><span class="line">    tokens = read_tokens()</span><br><span class="line">    <span class="comment"># 2. 构建训练样本</span></span><br><span class="line">    pairs = get_skip_gram_pairs(tokens, <span class="number">3</span>)</span><br><span class="line">    <span class="comment"># 3. 初始化模型参数</span></span><br><span class="line">    vocab_size = <span class="built_in">len</span>(data_map)</span><br><span class="line">    embed_in = np.random.rand(vocab_size, hidden_dim)</span><br><span class="line">    embed_out = np.random.rand(vocab_size, hidden_dim)</span><br><span class="line">    <span class="comment"># 4. 训练模型</span></span><br><span class="line">    train(pairs)</span><br></pre></td></tr></table></figure>
+</div><div class="tags"><ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Word2Vec/" rel="tag">Word2Vec</a></li></ul></div><div class="post-nav"><a class="pre" href="/1761284676/">Linux SSH 封禁多次登录失败 IP</a><a class="next" href="/1688195692/">最长回文子串</a></div><div class="nofancybox" id="waline"></div><link rel="stylesheet" type="text/css" href="https://unpkg.com/@waline/client@v3/dist/waline.css"><script type="module">import {init} from 'https://unpkg.com/@waline/client@v3/dist/waline.js';
+init({
+  el: '#waline',
+  comment: true,
+  serverURL: 'https://cmts.wangyulong.cn',
+  pageSize: '30',
+  wordLimit: '500',
+  requiredMeta,
+  emoji: [
+    '//unpkg.com/@waline/emojis@1.2.0/weibo',
+    '//unpkg.com/@waline/emojis@1.2.0/qq',
+    '//unpkg.com/@waline/emojis@1.2.0/tw-emoji',
+  ],
+});</script><script>let metaInfo = ['nick', 'mail', 'link']
+let requiredMeta = ''.split(',').filter(item => {
+  return metaInfo.indexOf(item) > -1
+})
+</script></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form class="search-form" action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="http://www.wangyulong.cn"/></form></div><div class="widget"><div class="author-info"><a class="info-avatar" href="/about.html" title="关于"><img class="nofancybox" src="/img/avatar.png"/></a><p>To be a better man.</p><a class="info-icon" href="https://twitter.com/null" title="Twitter" target="_blank" style="margin-inline:5px"> <i class="fa fa-twitter-square" style="margin-inline:5px"></i></a><a class="info-icon" href="mailto:ipjmcp@gmail.com" title="Email" target="_blank" style="margin-inline:5px"> <i class="fa fa-envelope-square" style="margin-inline:5px"></i></a><a class="info-icon" href="https://github.com/wylazy" title="Github" target="_blank" style="margin-inline:5px"> <i class="fa fa-github-square" style="margin-inline:5px"></i></a><a class="info-icon" href="/atom.xml" title="RSS" target="_blank" style="margin-inline:5px"> <i class="fa fa-rss-square" style="margin-inline:5px"></i></a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/LevelDB/">LevelDB</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/Linux/">Linux</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD/">人工智能</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%95%B0%E5%AD%A6/">数学</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%AE%97%E6%B3%95/">算法</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/%E7%AE%97%E6%B3%95/" style="font-size: 15px;">算法</a> <a href="/tags/MySQL/" style="font-size: 15px;">MySQL</a> <a href="/tags/%E6%95%B0%E5%AD%A6/" style="font-size: 15px;">数学</a> <a href="/tags/Word2Vec/" style="font-size: 15px;">Word2Vec</a> <a href="/tags/Linux/" style="font-size: 15px;">Linux</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/1761284676/">Linux SSH 封禁多次登录失败 IP</a></li><li class="post-list-item"><a class="post-list-link" href="/1734076558/">从头编写 Skip-Gram Word2Vec</a></li><li class="post-list-item"><a class="post-list-link" href="/1688195692/">最长回文子串</a></li><li class="post-list-item"><a class="post-list-link" href="/1659146474/">线性规划单纯形法</a></li><li class="post-list-item"><a class="post-list-link" href="/1527838601/">多项式插值</a></li><li class="post-list-item"><a class="post-list-link" href="/1587210716/">Poj 2663 Tri Tiling</a></li><li class="post-list-item"><a class="post-list-link" href="/1534732562/">编写 MySQL 插件</a></li><li class="post-list-item"><a class="post-list-link" href="/1534732376/">MySQL 复制中对 Load Data的处理（译）</a></li><li class="post-list-item"><a class="post-list-link" href="/1534731278/">MySQL 复制协议</a></li><li class="post-list-item"><a class="post-list-link" href="/1534730601/">MySQL 5.6 中Binlog Group Commit 实现</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-comment-o"> 最近评论</i></div><div id="widget-waline-list"></div><script type="text/javascript" id="recent-comment" serverURL="https://cmts.wangyulong.cn" count="10" src="/js/recent-comments.js?v=1.0.0" async="async"></script></div><div class="widget"><div class="widget-title"><i class="fa fa-external-link"> 常用链接</i></div><ul></ul><a href="/online-tools" title="在线工具" target="_blank">在线工具</a><ul></ul><a href="/generate-password" title="密码生成" target="_blank">密码生成</a><ul></ul><a href="/webnav/" title="导航页面" target="_blank">导航页面</a></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2025 <a href="/." rel="nofollow">学而知之.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a class="show" id="rocket" href="#top"></a><script type="text/javascript" src="/js/totop.js?v=1.0.0" async></script><script type="text/javascript" src="https://unpkg.com/@fancyapps/fancybox/dist/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=1.0.0" async></script><link rel="stylesheet" type="text/css" href="https://unpkg.com/@fancyapps/fancybox/dist/jquery.fancybox.min.css"><script type="text/javascript" src="/js/copycode.js?v=1.0.0" successtext="复制成功！"></script><link rel="stylesheet" type="text/css" href="/css/copycode.css?v=1.0.0"><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" async></script><script type="text/javascript" src="/js/codeblock-resizer.js?v=1.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=1.0.0"></script></div></body></html>

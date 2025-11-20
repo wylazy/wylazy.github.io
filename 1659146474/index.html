@@ -1,0 +1,1492 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description"><title>线性规划单纯形法 | 学而知之</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=1.0.0"><link rel="stylesheet" type="text/css" href="https://unpkg.com/normalize.css"><link rel="stylesheet" type="text/css" href="https://unpkg.com/purecss/build/pure-min.css"><link rel="stylesheet" type="text/css" href="https://unpkg.com/purecss/build/grids-responsive-min.css"><link rel="stylesheet" href="https://unpkg.com/font-awesome@4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="https://unpkg.com/jquery/dist/jquery.min.js"></script><link rel="icon" mask="" sizes="any" href="/favicon.ico"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><link rel="alternate" type="application/atom+xml" href="/atom.xml"><script type="text/javascript" src="https://unpkg.com/clipboard/dist/clipboard.min.js"></script><script type="text/javascript" src="https://unpkg.com/toastr/build/toastr.min.js"></script><link rel="stylesheet" href="https://unpkg.com/toastr/build/toastr.min.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">线性规划单纯形法</h1><a id="logo" href="/.">学而知之</a><p class="description"></p></div><div id="nav-menu"><a class="current" href="/."><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about.html"><i class="fa fa-user"> 关于</i></a><a href="/atom.xml"><i class="fa fa-rss"> 订阅</i></a></div></div><div class="pure-g" id="layout"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">线性规划单纯形法</h1><div class="post-meta">2022-07-30<span> | </span><span class="category"><a href="/categories/%E6%95%B0%E5%AD%A6/">数学</a></span></div><a class="disqus-comment-count" href="/1659146474/#waline"><span class="waline-comment-count" id="/1659146474/"></span><span> 条评论</span></a><div class="post-content"><p>线性规划是最优化问题中的一个重要领域。许多实际问题都可以归结为线性规划问题，例如：网络流、多商品流量等问题。我们在高中已经学习过只有
+<span class="math inline">\(2\)</span>
+个变量的场景，可以使用图解法来求最优解。该方法虽然直观，易于理解，但是难以推广到
+<span class="math inline">\(n\)</span>
+个变量的场景。面对更加复杂的线性规划问题，单纯形法是则是更加常用的方法。本文尝试从线性代数基础知识出发，一步一步的推导出单纯形法，并提出一种避免退化基变换的迭代方法，从而避免了单纯形陷入无限循环的情况。</p>
+<h2 id="线性规划的标准形式">线性规划的标准形式</h2>
+<p>线性规划问题的标准形式如下</p>
+<p>目标：<span class="math inline">\(\max : c_1 \cdot x_1 + c_2 \cdot
+x_2 + ... + c_n \cdot x_n\)</span> ，<span
+class="math inline">\(c_i\)</span> 是给定的常量。<span
+class="math inline">\(x_i\)</span> 是变量，需要满足如下约束：</p>
+<p><span class="math display">\[
+\begin{aligned}
+a_{11} \cdot x_1 + a_{12} \cdot x_2 + ... + a_{1n} \cdot x_n &amp;= b_1
+\\
+a_{21} \cdot x_1 + a_{22} \cdot x_2 + ... + a_{2n} \cdot x_n &amp;= b_2
+\\
+... \\
+a_{m1} \cdot x_1 + a_{m2} \cdot x_2 + ... + a_{mn} \cdot x_n &amp;= b_m
+\end{aligned}
+\]</span> 而且对于每一个 <span class="math inline">\(x_i\)</span>
+需要满足约束条件： <span class="math inline">\(x_i \geq 0\)</span>
+。在标准形式中，要求 <span class="math inline">\(b_i \geq
+0\)</span>，但是如果其中某个 <span class="math inline">\(b_i &lt;
+0\)</span>，可以将该方程两边同时乘以 <span
+class="math inline">\(-1\)</span> 转化为标准形式。</p>
+<p>将标准形式写成矩阵形式：</p>
+<p>目标：<span class="math inline">\(\max : \mathbf{c^T \cdot
+x}\)</span></p>
+<p>约束：<span class="math inline">\(\mathbf{Ax} = \mathbf{b}, \mathbf{x
+\geq 0}\)</span></p>
+<p>在标准形式下，<span class="math inline">\(\mathbf{b}\)</span>
+也需要满足 <span class="math inline">\(\mathbf{b \geq 0}\)</span>，即
+<span class="math inline">\(\mathbf{b}\)</span> 的每一个分量都大于等于
+0。</p>
+<blockquote>
+<p>有时候目标是求最小值，基本方法是一样的，也可以通过将目标函数乘以
+<span class="math inline">\(-1\)</span>，转化为最大值问题求解。</p>
+</blockquote>
+<h2 id="基础知识">基础知识</h2>
+<h3 id="线性代数">线性代数</h3>
+<p>回顾一下线性代数基础知识，对于线性方程组 <span
+class="math inline">\(\mathbf{Ax} = \mathbf{b}\)</span>，其中 <span
+class="math inline">\(\mathbf{A}\)</span> 是一个 <span
+class="math inline">\(m \times n\)</span> 的矩阵（<span
+class="math inline">\(m\)</span> 个方程，<span
+class="math inline">\(n\)</span> 个未知量）。用 <span
+class="math inline">\(rank(\mathbf{A})\)</span> 代表矩阵 <span
+class="math inline">\(\mathbf{A}\)</span> 的秩，方程组的增广矩阵为 <span
+class="math inline">\([\mathbf{A|b}]\)</span>，只有当 <span
+class="math inline">\(rank(\mathbf{A}) = rank([\mathbf{A|b}])\)</span>
+时，该方程组才可能有解，在此情况下，还可以分为以下 3 种情况：</p>
+<ol type="1">
+<li>如果 <span class="math inline">\(rank(\mathbf{A}) &lt; n\)</span>
+，那么该线性方程组有无穷多组解</li>
+<li>如果 <span class="math inline">\(rank(\mathbf{A}) = n\)</span>
+，那么该线性方程组有唯一解</li>
+<li>如果 <span class="math inline">\(rank(\mathbf{A}) &gt; n\)</span>
+，那么该线性方程组无解</li>
+</ol>
+<p>对于情况 2 和情况
+3，对于使用线性代数方法很容易解决，这里不在赘述。</p>
+<p>情况 <span class="math inline">\(1\)</span>
+是我们研究的对象，在这种情况下，设矩阵 <span
+class="math inline">\(\mathbf{A}\)</span> 的秩是 <span
+class="math inline">\(K\)</span>，由于 <span class="math inline">\(K
+&lt; n\)</span>，那么矩阵 <span
+class="math inline">\(\mathbf{A}\)</span>
+可以通过高斯消元法（加减消元法）消除冗余的方程，最终只剩下由 <span
+class="math inline">\(K\)</span>
+个线性无关的方程（通过手动计算，或者计算机程序都很容易做到）。<strong>在以下的讨论中，均假设
+<span class="math inline">\(\mathbf{A}\)</span>
+已经是经过高斯消元之后的方程组</strong>。</p>
+<p><strong>定义一</strong> ：如果对于某个 <span
+class="math inline">\(\mathbf{x_0}\)</span>，满足约束条件：<span
+class="math inline">\(\mathbf{Ax_0} = \mathbf{b}, \mathbf{x_0 \geq
+0}\)</span>，那么称 <span class="math inline">\(\mathbf{x_0}\)</span>
+是该线性规划的一个<strong>可行解</strong>。由所有可行解组成的集合为<strong>可行域</strong>。</p>
+<p><strong>定义二</strong> ：已知线性规划问题中，矩阵 <span
+class="math inline">\(\mathbf{A}\)</span> 的秩是 <span
+class="math inline">\(m\)</span>，则矩阵 <span
+class="math inline">\(\mathbf{A}\)</span> 中存在 <span
+class="math inline">\(m\)</span> 个线性无关的列向量。只将这 <span
+class="math inline">\(m\)</span> 个列向量对应的 <span
+class="math inline">\(x\)</span> 视作未知量，将其他列向量对应的 <span
+class="math inline">\(x\)</span> 取值为 <span
+class="math inline">\(0\)</span>，则方程 <span
+class="math inline">\(\mathbf{Ax} = \mathbf{b}\)</span> 有唯一解 <span
+class="math inline">\(\mathbf{x_0}\)</span>，将这个解称之为<strong>基解</strong>。这
+<span class="math inline">\(m\)</span>
+个列向量被称为<strong>基向量</strong>。基向量对应的 <span
+class="math inline">\(x\)</span>
+分量称为<strong>基变量</strong>，基变量的个数也是 <span
+class="math inline">\(m\)</span>。基变量中也有可能取值为 <span
+class="math inline">\(0\)</span>，这种情况称为退化。如果所有基变量都大于等于
+<span class="math inline">\(0\)</span>，那么称 <span
+class="math inline">\(\mathbf{x_0}\)</span>
+是一个<strong>基可行解</strong>。</p>
+<blockquote>
+<p>备注：基解、可行解、基可行解只和约束条件有关，和目标函数无关</p>
+</blockquote>
+<p><strong>例一</strong>：对于如下线性方程组，求它的一个基解。 <span
+class="math display">\[
+\begin{aligned}
+x_1 + x_2 + 2x_3 + x_4 + x_5 &amp;= 9 \\
+2x_1 + x_2 + x_3 + 3x_4 + x_5 &amp;= 12
+\end{aligned}
+\]</span> 该方程组中有 <span class="math inline">\(5\)</span>
+个未知量，<span class="math inline">\(2\)</span>
+个线性无关的方程，所以矩阵 <span
+class="math inline">\(\mathbf{A}\)</span> 的秩是 <span
+class="math inline">\(2\)</span>。前 <span
+class="math inline">\(2\)</span> 个列向量为： <span
+class="math display">\[
+\left (
+\begin{array}{c|c}
+1 &amp; 1 \\
+2 &amp; 1 \\
+\end{array}
+\right )
+\]</span> 这 <span class="math inline">\(2\)</span>
+个列向量是线性无关的，对应的 <span
+class="math inline">\(\mathbf{x}\)</span> 的分量分别为 <span
+class="math inline">\(x_1, x_2\)</span>，将其他分量 <span
+class="math inline">\(x_3,x_4,x_5\)</span> 取值为 <span
+class="math inline">\(0\)</span>，方程组可简化为： <span
+class="math display">\[
+\begin{array}{rrrrr}
+x_1 &amp;+&amp; x_2 &amp;+&amp; 2 \cdot 0 &amp;+&amp; 1 \cdot 0
+&amp;+&amp; 1 \cdot 0 &amp;=&amp; 9 \\
+2x_1 &amp;+&amp; x_2 &amp;+&amp; 1\cdot 0 &amp;+&amp; 3 \cdot 0
+&amp;+&amp; 1 \cdot 0 &amp;=&amp; 12
+\end{array}
+\]</span> 该方程有唯一解，可以解得： <span
+class="math inline">\(\mathbf{x_0} = (3,6,0,0,0)^T\)</span>，这里的
+<span class="math inline">\(\mathbf{x_0}\)</span> 就是一个基解，对应的
+<span class="math inline">\(x_1\)</span> 和 <span
+class="math inline">\(x_2\)</span>
+是基变量。由于每一个非零分量都是正数，所以也是基可行解。</p>
+<p>对于有 <span class="math inline">\(n\)</span>
+个未知量的线性规划问题，由于基变量有 <span
+class="math inline">\(m\)</span> 个，所以基解的个数最多为 <span
+class="math inline">\(\displaystyle \binom{n}{m} =
+\frac{n!}{m!(n-m)!}\)</span></p>
+<p><strong>定理一</strong>：已知 <span class="math inline">\(m\)</span>
+个向量组 <span
+class="math inline">\(\{\mathbf{a_1},\mathbf{a_2},...,\mathbf{a_m}\}\)</span>
+线性无关，向量 <span class="math inline">\(\mathbf{b}\)</span>
+可以唯一表示为 <span class="math inline">\(\mathbf{b} = \lambda_1
+\mathbf{a_1} + \lambda_2  \mathbf{a_2} + ... + \lambda_m
+\mathbf{a_m}\)</span>，而且其中存在一个 <span
+class="math inline">\(\lambda_i \neq 0\)</span>，那么向量组 <span
+class="math inline">\(\{\mathbf{a_1}, ..., \mathbf{a_{i-1}}, \mathbf{b},
+\mathbf{a_{i+1}}, ..., \mathbf{a_{m}}\}\)</span> 线性无关。</p>
+<p>证明：由于 <span class="math inline">\(\lambda_i \neq 0\)</span>，对
+<span class="math inline">\(\mathbf{b} = \lambda_1 \mathbf{a_1} +
+\lambda_2  \mathbf{a_2} + ... + \lambda_m \mathbf{a_m}\)</span>
+做等价变换可得： <span class="math display">\[
+\frac{-\lambda_1}{\lambda_i}\mathbf{a_1} +
+... +
+\frac{-\lambda_{i-1}}{\lambda_i}\mathbf{a_{i-1}} +
+\frac{1}{\lambda_i}\mathbf{b} +
+\frac{-\lambda_{i+1}}{\lambda_i}\mathbf{a_{i+1}} +
+... +
+\frac{-\lambda_{m}}{\lambda_i}\mathbf{a_{m}}
+= \mathbf{a_i}
+\]</span> 由于以上的表示法是唯一的，所以线性方程组 <span
+class="math inline">\(\mathbf{[{a_1}, ..., a_{i-1}, b, a_{i+1}, ...,
+a_m]x = a_i}\)</span> 有唯一解，矩阵 <span
+class="math inline">\(\mathbf{[{a_1}, ..., a_{i-1}, b, a_{i+1}, ...,
+a_m]}\)</span> 的秩为 <span
+class="math inline">\(m\)</span>。由于向量的个数也是 <span
+class="math inline">\(m\)</span>，所以向量组 <span
+class="math inline">\(\{\mathbf{a_1}, ..., \mathbf{a_{i-1}}, \mathbf{b},
+\mathbf{a_{i+1}}, ..., \mathbf{a_{m}}\}\)</span> 线性无关。</p>
+<h3 id="凸集">凸集</h3>
+<p><strong>定义三</strong>：对于集合 <span
+class="math inline">\(\mathbf{C}\)</span> 中的任意 <span
+class="math inline">\(2\)</span> 个点 <span
+class="math inline">\(\mathbf{x_1,x_2}\)</span>，如果其连线上的任意一个点也都属于集合
+<span class="math inline">\(\mathbf{C}\)</span>，那么称集合 <span
+class="math inline">\(\mathbf{C}\)</span> 为<strong>凸集</strong>。其中
+<span class="math inline">\(\mathbf{x_1,x_2}\)</span>
+连线上的点可以形式化表示为 <span class="math inline">\(a \cdot
+\mathbf{x_1} + (1-a) \cdot \mathbf{x_2}\)</span>，其中 <span
+class="math inline">\(0 \leq a \leq 1\)</span> 。</p>
+<p><strong>定理二</strong>：如果线性规划存在可行解，那么所有可行解组成的集合是一个凸集。</p>
+<p><strong>证明</strong>：假设 <span
+class="math inline">\(\mathbf{x_1,x_2}\)</span> 是线性规划 <span
+class="math inline">\(\mathbf{Ax} = \mathbf{b}, \mathbf{x \geq
+0}\)</span> 的可行解。那么对于任意 <span class="math inline">\(0 \leq a
+\leq 1\)</span>，都有： <span class="math display">\[
+\begin{aligned}
+\mathbf{x_1 \geq 0} &amp;\Rightarrow a \cdot \mathbf{x_1} \geq
+\mathbf{0} \\
+\mathbf{x_2 \geq 0} &amp;\Rightarrow (1 - a) \cdot \mathbf{x_2} \geq
+\mathbf{0} \\
+\end{aligned}
+\]</span> 将以上两式相加可得： <span class="math display">\[
+a \cdot \mathbf{x_1} + (1-a) \cdot \mathbf{x_2} \geq \mathbf{0}
+\]</span> 类似的： <span class="math display">\[
+\begin{aligned}
+\mathbf{Ax_1} = \mathbf{b} &amp;\Rightarrow \mathbf{A} \cdot (a
+\mathbf{x_1}) = a \cdot \mathbf{b} \\
+\mathbf{Ax_2} = \mathbf{b} &amp;\Rightarrow \mathbf{A} \cdot ((1-a)
+\mathbf{x_1}) = (1-a) \cdot \mathbf{b}
+\end{aligned}
+\]</span> 将以上两式相加可得： <span class="math display">\[
+\mathbf{A}(a \cdot \mathbf{x_1} + (1-a) \cdot \mathbf{x_2}) = \mathbf{b}
+\]</span> 所以 <span class="math inline">\(a \cdot \mathbf{x_1} + (1-a)
+\cdot \mathbf{x_2}\)</span> 也是一个可行解。证毕！</p>
+<p><strong>定义三</strong>：在凸集 <span
+class="math inline">\(\mathbf{C}\)</span> 中，如果点 <span
+class="math inline">\(\mathbf{x}\)</span>
+不在任何两个不同的点的连线上，那么称 <span
+class="math inline">\(\mathbf{x}\)</span> 为 <span
+class="math inline">\(\mathbf{C}\)</span>
+的<strong>顶点</strong>。换而言之，如果 <span
+class="math inline">\(\mathbf{x}\)</span> 是顶点，且 <span
+class="math inline">\(\mathbf{x} = a \cdot \mathbf{x_1} + (1-a) \cdot
+\mathbf{x_2}\)</span>，其中 <span class="math inline">\(0 \leq a \leq
+1\)</span>，那么必然有 <span class="math inline">\(\mathbf{x_1} =
+\mathbf{x_2}\)</span> 。</p>
+<p><strong>定理二</strong>：如果凸集 <span
+class="math inline">\(\mathbf{C}\)</span> 中顶点的个数是有限的，那么
+<span class="math inline">\(\mathbf{C}\)</span>
+中的任意一个点，都可以写成顶点的凸组合。即 <span
+class="math inline">\(\mathbf{C}\)</span> 中有 <span
+class="math inline">\(n\)</span> 个顶点 <span
+class="math inline">\(\mathbf{P_1,P_2,...P_n}\)</span>，对于 <span
+class="math inline">\(\mathbf{C}\)</span> 中任意一个点 <span
+class="math inline">\(\mathbf{P}\)</span>，可以写为 <span
+class="math inline">\(\mathbf{P} =
+\sum\limits_{i=1}^{n}\lambda_i\mathbf{P_i}\)</span>，其中 <span
+class="math inline">\(0 \leq \lambda_i \leq 1\)</span>，并且 <span
+class="math inline">\(\sum\limits_{i=1}^{n}\lambda_i = 1\)</span>。</p>
+<p><strong>证明</strong>：使用数学归纳法证明。首先考虑最简单的情况，<span
+class="math inline">\(\mathbf{C}\)</span> 中只有 <span
+class="math inline">\(2\)</span> 个顶点 <span
+class="math inline">\(\mathbf{P_1,P_2}\)</span>，那么根据凸集的定义，其内的点
+<span class="math inline">\(\mathbf{P}\)</span> 满足关系： <span
+class="math inline">\(\mathbf{P} = \lambda_1\mathbf{P_1} +
+\lambda_2\mathbf{P_2}\)</span>，其中 <span class="math inline">\(0 \leq
+\lambda_1,\lambda_2 \leq 1\)</span> ，且 <span
+class="math inline">\(\lambda_1 + \lambda_2 = 1\)</span>。</p>
+<p>归纳假设对于任何一个顶点个数为 <span class="math inline">\(n\)</span>
+的凸集 <span
+class="math inline">\(\mathbf{C_n}\)</span>，该结论是成立的，那么再新增一个顶点
+<span class="math inline">\(\mathbf{P_{n+1}}\)</span>，使得 <span
+class="math inline">\(\mathbf{C_n}\)</span> 中的部分区域和 <span
+class="math inline">\(\mathbf{P_{n+1}}\)</span>
+围成一个新的区域，再加上原有的 <span
+class="math inline">\(\mathbf{C_n}\)</span> 会形成一个顶点个数为 <span
+class="math inline">\(n+1\)</span> 的凸集 <span
+class="math inline">\(\mathbf{C_{n+1}}\)</span>。对于老区域中的点，由归纳假设可直接得证。而从新区域的构成可知，新区域中的任何一个点
+<span class="math inline">\(\mathbf{Q}\)</span> 都是老区域中的点 <span
+class="math inline">\(\mathbf{P}\)</span> 和 <span
+class="math inline">\(\mathbf{P_{n+1}}\)</span> 连接线上的点。所以 <span
+class="math inline">\(\mathbf{Q} = \lambda\mathbf{P} +
+\lambda_{n+1}\mathbf{P_{n+1}}\)</span>，其中 <span
+class="math inline">\(0 \leq \lambda,\lambda_{n+1} \leq 1\)</span> ，且
+<span class="math inline">\(\lambda + \lambda_{n+1} = 1\)</span>。</p>
+<p>由归纳假设可知：<span class="math inline">\(\mathbf{P} =
+\sum\limits_{i=1}^{n}\lambda_i\mathbf{P_i}\)</span>，其中 <span
+class="math inline">\(0 \leq \lambda_i \leq 1\)</span>，并且 <span
+class="math inline">\(\sum\limits_{i=1}^{n}\lambda_i = 1\)</span>。</p>
+所以： <span class="math display">\[
+\begin{aligned}
+\mathbf{Q} &amp;= \lambda\mathbf{P} + \lambda_{n+1}\mathbf{P_{n+1}} \\
+           &amp;= \lambda\sum\limits_{i=1}^{n}\lambda_i\mathbf{P_i} +
+\lambda_{n+1}\mathbf{P_{n+1}} \\
+           &amp;= \sum\limits_{i=1}^{n}\lambda\lambda_i\mathbf{P_i} +
+\lambda_{n+1}\mathbf{P_{n+1}}
+\end{aligned}
+\]</span> 由于 <span class="math inline">\(\lambda 和 \lambda_i\)</span>
+均为非负，所以 <span class="math inline">\(\mathbf{P_i}\)</span> 的系数
+<span class="math inline">\(\lambda\lambda_i\)</span> 和 <span
+class="math inline">\(\lambda_{n+1}\)</span> 均为非负，而且满足关系： $$
+<span class="math display">\[\begin{aligned}
+\sum\limits_{i=1}^{n}\lambda\lambda_i + \lambda_{n+1}
+  &amp;= \lambda\sum\limits_{i=1}^{n}\lambda_i + \lambda_{n+1} \\
+  &amp;= \lambda + \lambda_{n+1} \\
+  &amp;= 1
+      
+\end{aligned}\]</span>
+<p>$$ 由此可知，如果凸集 <span class="math inline">\(\mathbf{C}\)</span>
+中顶点的个数是有限的，那么 <span
+class="math inline">\(\mathbf{C}\)</span>
+中的任意一个点，都可以写成顶点的凸组合。</p>
+<p><strong>定理三</strong>：如果线性规划问题的可行域是有界的，那么在可行域中一定存在某个顶点是最优解。</p>
+<p><strong>证明</strong>：线性规划的目标为 <span
+class="math inline">\(\max : \mathbf{c^T \cdot x}\)</span>
+，假设最优解为 <span
+class="math inline">\(\mathbf{x_0}\)</span>。由定理二可知， <span
+class="math inline">\(\mathbf{x_0}\)</span>
+可以写为顶点的凸组合。不妨设可行域有 <span
+class="math inline">\(n\)</span> 个顶点：<span
+class="math inline">\(\mathbf{x_1,x_2,...x_n}\)</span> 。那么 <span
+class="math inline">\(\mathbf{x_0} =
+\sum\limits_{i=1}^{n}\mathbf{x_i}\)</span>，其中 <span
+class="math inline">\(0 \leq \lambda_i \leq 1\)</span>，并且 <span
+class="math inline">\(\sum\limits_{i=1}^{n}\lambda_i =
+1\)</span>。假设在集合 <span class="math inline">\(\{\mathbf{c^T x_1},
+\mathbf{c^T x_2}, ..., \mathbf{c^T x_n}, \}\)</span> 中，最大的元素为
+<span class="math inline">\(\mathbf{c^T
+x_k}\)</span>。那么可以得到以下关系： <span class="math display">\[
+\begin{aligned}
+\mathbf{c^T x_0} &amp;=
+\mathbf{c^T}\sum\limits_{i=1}^{n}\lambda_i\mathbf{x_i} \\
+             &amp;= \sum\limits_{i=1}^{n}\lambda_i\mathbf{c^T x_i} \\
+             &amp;\leq \sum\limits_{i=1}^{n}\lambda_i\mathbf{c^T x_k} \\
+             &amp;= \mathbf{c^T x_k}\sum\limits_{i=1}^{n}\lambda_i \\
+             &amp;= \mathbf{c^T x_k}
+\end{aligned}
+\]</span> 由于 <span class="math inline">\(\mathbf{x_0}\)</span>
+是最优解（不管是否为顶点），而 <span class="math inline">\(\mathbf{c^T
+x_0} \leq \mathbf{c^T x_k}\)</span>，所以 <span
+class="math inline">\(\mathbf{x_k}\)</span> 也是最优解。证毕！</p>
+<blockquote>
+<p>注：如何可行域是无界的，如果存在最优解的话，也一定可以在顶点处取得，这里将证明略去。</p>
+</blockquote>
+<p><strong>定理四</strong>：线性规划中可行域的每一个顶点都是基可行解；同样每个基可行解也都是可行域的顶点。</p>
+<p><strong>证明</strong>：<strong>首先证明线性规划中可行域的每一个顶点都是基可行解</strong>。</p>
+<p>假设线性规划约束条件中，矩阵 <span
+class="math inline">\(\mathbf{A}\)</span> 的秩为 <span
+class="math inline">\(m\)</span>，当前顶点为 <span
+class="math inline">\(\mathbf{x}\)</span>，且 <span
+class="math inline">\(\mathbf{x}\)</span> 的分量中，非 <span
+class="math inline">\(0\)</span> 分量的个数为 <span
+class="math inline">\(k\)</span>。分为以下 <span
+class="math inline">\(2\)</span> 种情况讨论：</p>
+<ol type="1">
+<li><span class="math inline">\(\mathbf{x}\)</span> 的非零分量对应 <span
+class="math inline">\(\mathbf{A}\)</span>
+中的列向量线性无关，有基可行解的定义可知， <span
+class="math inline">\(\mathbf{x}\)</span> 是一个基可行解。</li>
+<li><span class="math inline">\(\mathbf{x}\)</span> 的非零分量对应 <span
+class="math inline">\(\mathbf{A}\)</span>
+中的列向量线性相关。以下使用反正法证明该情况不存在。首先假设这种情况存在，为使描述更加方便，这里假设
+<span class="math inline">\(\mathbf{x}\)</span> 的前 <span
+class="math inline">\(k\)</span> 个分量不为 <span
+class="math inline">\(0\)</span>，其余分量均为 <span
+class="math inline">\(0\)</span>，所以 <span
+class="math inline">\(\mathbf{x} =
+(x_1,x_2,...,x_k,0,0,..,0)^T\)</span>。由于 <span
+class="math inline">\(\mathbf{x}\)</span>
+在可行域中，所以非零分量都只能是正数。将矩阵 <span
+class="math inline">\(\mathbf{A}\)</span> 写成列向量的形式：<span
+class="math inline">\(\mathbf{A} =
+[\mathbf{a_1},\mathbf{a_2},...,\mathbf{a_n}]\)</span>。线性方程组的形式为</li>
+</ol>
+<p><span class="math display">\[
+x_1 \mathbf{a_1} + x_2 \mathbf{a_2} + ... + x_n \mathbf{a_n} =
+\mathbf{b}
+\]</span></p>
+<p>由于 <span class="math inline">\(\mathbf{x}\)</span> 中，只有前 <span
+class="math inline">\(k\)</span> 个分量非零，其余分量为 <span
+class="math inline">\(0\)</span>，化简如下： <span
+class="math display">\[
+\begin{equation}
+x_1 \mathbf{a_1} + x_2 \mathbf{a_2} + ... + x_k \mathbf{a_k} =
+\mathbf{b} \tag{1}
+\end{equation}
+\]</span> 另外由于向量 <span
+class="math inline">\(\mathbf{a_1},\mathbf{a_2},...,\mathbf{a_k}\)</span>
+线性相关，所以方程组：<span
+class="math inline">\([\mathbf{a_1},\mathbf{a_2},...,\mathbf{a_k}] \cdot
+\mathbf{x} = \mathbf{0}\)</span> 有无穷多组解。设其中一组非零解为 <span
+class="math inline">\(\mathbf{y}\)</span>，即： <span
+class="math display">\[
+y_1 \mathbf{a_1} + y_2 \mathbf{a_2} + ... + y_k \mathbf{a_k} =
+\mathbf{0}
+\]</span> 将以上方程两边同时乘以极小的正实数 <span
+class="math inline">\(\varepsilon\)</span> 可得： <span
+class="math display">\[
+\varepsilon y_1 \mathbf{a_1} + \varepsilon y_2 \mathbf{a_2} + ... +
+\varepsilon y_k \mathbf{a_k} = \mathbf{0} \tag{2}
+\]</span> <span class="math inline">\((1)\)</span> 式减 <span
+class="math inline">\((2)\)</span>式可得： <span class="math display">\[
+(x_1 - \varepsilon y_1) \mathbf{a_1} +
+(x_2 - \varepsilon y_2) \mathbf{a_2} +
+... +
+(x_k -\varepsilon y_k) \mathbf{a_k} = \mathbf{b} \tag{3}
+\]</span> 由于 <span class="math inline">\(\varepsilon\)</span>
+是一个任意小的正实数，可以保证方程 <span
+class="math inline">\((3)\)</span> 中的每一项 <span
+class="math inline">\(x_i - \varepsilon y_i\)</span>
+都是正数，所以得到了一个新的可行解 <span
+class="math inline">\(\mathbf{x} - \varepsilon \mathbf{y}\)</span>
+。同理，将 <span class="math inline">\((1)\)</span> 式加 <span
+class="math inline">\((2)\)</span> 式也可得的一个新的可行解 <span
+class="math inline">\(\mathbf{x} + \varepsilon \mathbf{y}\)</span>。由于
+<span class="math inline">\(\varepsilon \neq 0\)</span> ，所以 <span
+class="math inline">\(\mathbf{x} - \varepsilon \mathbf{y} \neq
+\mathbf{x} + \varepsilon \mathbf{y}\)</span>。同时 <span
+class="math inline">\(\mathbf{x} = \frac{1}{2}(\mathbf{x} - \varepsilon
+\mathbf{y}) + \frac{1}{2} (\mathbf{x} + \varepsilon
+\mathbf{y})\)</span>，所以 <span
+class="math inline">\(\mathbf{x}\)</span>
+不是可行域的顶点，与前提条件矛盾，所以该情况不存在。</p>
+<p><strong>以下为证明线性规划的每个基可行解都是可行域的顶点</strong>。</p>
+<p>设当前基可行解为 <span
+class="math inline">\(\mathbf{x}\)</span>，矩阵 <span
+class="math inline">\(\mathbf{A}\)</span> 的秩为 <span
+class="math inline">\(m\)</span> ，那么 <span
+class="math inline">\(\mathbf{x}\)</span> 中就有 <span
+class="math inline">\(m\)</span> 个基变量，同时其余的非基变量均为 <span
+class="math inline">\(0\)</span>。为了描述更加简便，不妨设 <span
+class="math inline">\(\mathbf{x}\)</span> 的前 <span
+class="math inline">\(m\)</span> 个分量为基变量，则 <span
+class="math inline">\(\mathbf{x} = (x_1, x_2, ..., x_m,
+0,0,...,0)^T\)</span>，其中当 <span class="math inline">\(1 \leq i \leq
+m\)</span>时，<span class="math inline">\(x_i \ge
+0\)</span>。由于可行解是一个凸集，<span
+class="math inline">\(\mathbf{x}\)</span> 可以写为形式： <span
+class="math inline">\(\mathbf{x} = \lambda \cdot \mathbf{y} +
+(1-\lambda) \cdot \mathbf{z}\)</span>，其中 <span
+class="math inline">\(\mathbf{y,z}\)</span> 也是可行解，<span
+class="math inline">\(0 \leq \lambda \leq 1\)</span>。为了证明 <span
+class="math inline">\(\mathbf{x}\)</span> 是顶点，只需要证明 <span
+class="math inline">\(\mathbf{y} = \mathbf{z}\)</span> 即可。</p>
+<p>由于 <span class="math inline">\(\mathbf{y,z}\)</span>
+是可行解，所以它们的每一个分量都大于等于 <span
+class="math inline">\(0\)</span>，而 <span
+class="math inline">\(\lambda\)</span> 和 <span class="math inline">\(1
+- \lambda\)</span> 也都大于等于 <span
+class="math inline">\(0\)</span>，对于 <span
+class="math inline">\(\mathbf{x}\)</span> 取 <span
+class="math inline">\(0\)</span> 的分量， <span
+class="math inline">\(\mathbf{y,z}\)</span> 也只能取 0。<span
+class="math inline">\(\mathbf{y,z}\)</span> 的形式如下:</p>
+<p><span class="math display">\[
+\mathbf{x} = (x_1, x_2, ... x_m, 0, 0, ..., 0)^T \\
+\mathbf{y} = (y_1, y_2, ... y_m, 0, 0, ..., 0)^T \\
+\mathbf{z} = (z_1, z_2, ... z_m, 0, 0, ..., 0)^T \\
+\]</span> 另一方面，由于 <span
+class="math inline">\(\mathbf{y,z}\)</span>
+是可行解，它们也满足关系：<span
+class="math inline">\(\mathbf{Ay=b},\mathbf{Az=b}\)</span></p>
+<p>对 <span class="math inline">\(\mathbf{x,y,z}\)</span> 只截取前 <span
+class="math inline">\(m\)</span> 个分量，分别命名为 <span
+class="math inline">\(\mathbf{\tilde x, \tilde y,\tilde z}\)</span>。
+<span class="math display">\[
+\mathbf{\tilde x} = (x_1, x_2, ... x_m)^T \\
+\mathbf{\tilde y} = (y_1, y_2, ... y_m)^T \\
+\mathbf{\tilde z} = (z_1, z_2, ... z_m)^T \\
+\]</span> 取矩阵 <span class="math inline">\(\mathbf{A}\)</span>
+中对应的 <span class="math inline">\(m\)</span> 个列向量，组成一个 <span
+class="math inline">\(m \times m\)</span> 的方阵 <span
+class="math inline">\(\mathbf{\tilde A}\)</span>，对应 <span
+class="math inline">\(\mathbf{b}\)</span> 中的 <span
+class="math inline">\(m\)</span> 个分量组成向量 <span
+class="math inline">\(\mathbf{\tilde b}\)</span>。那么有以下关系： <span
+class="math display">\[
+\begin{align*}
+\mathbf{\tilde A \tilde y} &amp;= \mathbf{\tilde b}     &amp; (1) \\
+\mathbf{\tilde A \tilde z} &amp;= \mathbf{\tilde b}     &amp; (2) \\
+\mathbf{\tilde A (\tilde y - \tilde z)} &amp;= \mathbf{0}     &amp;
+(1)-(2) \\
+\end{align*}
+\]</span> 由于 <span class="math inline">\(\mathbf{\tilde A}\)</span>
+的列向量线性无关，方程 <span class="math inline">\(\mathbf{\tilde A
+(\tilde y - \tilde z)} = \mathbf{0}\)</span> 只有零解，所以 <span
+class="math inline">\(\mathbf{\tilde y - \tilde z} =
+\mathbf{0}\)</span>。即 <span class="math inline">\(\mathbf{\tilde y=
+\tilde z}\)</span>，再拼接上剩余的 <span
+class="math inline">\(0\)</span> 分量，可得 <span
+class="math inline">\(\mathbf{y = z}\)</span>。所以 <span
+class="math inline">\(\mathbf{x}\)</span> 是可行域的顶点。证毕！</p>
+<h2 id="单纯形法">单纯形法</h2>
+<p>单纯形法的基本思路是基于迭代的思想，并非直接计算目标，而是通过迭代计算，一步一步的靠近目标，从而最终达到目标值。通过前面的介绍，我们知道线性规划如果能取到最大值，一定可以在某个基可行解取到最大值，所以迭代的方向是从一个基可行解变换到另一个相邻的基可行解，同时使得结果更加接近最大值。</p>
+<p><strong>定义四</strong>：如果两个基可行解仅有一个基变量互换，那么称这
+<span class="math inline">\(2\)</span> 个基可行解是相邻的。</p>
+<p><strong>例二</strong>：基可行解 <span
+class="math inline">\((x_1,x_2,x_3,0,0)^T\)</span> 和 <span
+class="math inline">\((x_1,x_2,0,0,x_5)^T\)</span>
+就是相邻的，它们可以通过互换 <span class="math inline">\(x_3
+\leftrightarrow x_5\)</span> 获得。</p>
+<h3 id="最简形式">最简形式</h3>
+<p>如果我们已经确定了基变量，那么通过初等行变换，必然能使基变量对应的矩阵形成一个单位矩阵，这里这种形式的矩阵称为<strong>最简形式</strong>。单位矩阵的
+<span class="math inline">\(m\)</span>
+个列向量线性无关，被作为基向量，相应的 <span
+class="math inline">\(x_i\)</span>
+为基变量。如果忽略列的下标，进行初等列变换之后，可以将单位矩阵放到最左边。
+<span class="math display">\[
+\begin{pmatrix}
+1 &amp; 0 &amp; \dots &amp; 0 &amp; a_{1,m+1} &amp; a_{1,m+2}, &amp;
+\dots &amp; a_{1,n} \\
+0 &amp; 1 &amp; \dots &amp; 0 &amp; a_{2,m+1} &amp; a_{2,m+2}, &amp;
+\dots &amp; a_{2,n} \\
+\vdots &amp; \vdots &amp; \ddots &amp; \vdots \\
+0 &amp; 0 &amp; \dots &amp; 1 &amp; a_{m,m+1} &amp; a_{m,m+2}, &amp;
+\dots &amp; a_{m,n}
+\end{pmatrix}
+\cdot
+\begin{pmatrix}
+x_1 \\
+x_2 \\
+\vdots \\
+x_n
+\end{pmatrix}
+=
+\begin{pmatrix}
+b_1 \\
+b_2 \\
+\vdots \\
+b_m \\
+\end{pmatrix}
+\]</span>
+矩阵这样变换之后，使得后面的分析和处理都更加方便。比如可以直接把对应的基解写出来：
+<span class="math display">\[
+\mathbf{x} = (b_1, b_2, ... b_m, 0, 0, ..., 0)^T
+\]</span> 对于矩阵 <span class="math inline">\(\mathbf{A} =
+[\mathbf{a_1},\mathbf{a_2},...,\mathbf{a_n}]\)</span> 中的列向量 <span
+class="math inline">\(\mathbf{a_j}\)</span> ，其中 <span
+class="math inline">\(m+1 \leq j \leq
+n\)</span>，可以写为基向量的线性组合： <span class="math display">\[
+\begin{equation}
+\mathbf{a_j} = a_{1j} \cdot \mathbf{a_1} + a_{2j} \cdot \mathbf{a_2} +
+... + a_{mj} \cdot \mathbf{a_m} \tag{4}
+\end{equation}
+\]</span></p>
+<p><strong>例三</strong>：考虑如下线性方程组： <span
+class="math display">\[
+\begin{pmatrix}
+{\color{red} 1}  &amp;  {\color{red} 0} &amp; {\color{red} 0}  &amp;
+-2  &amp; 0 \\
+{\color{red} 0}  &amp;  {\color{red} 1} &amp; {\color{red} 0}  &amp;
+5  &amp; 1 \\
+{\color{red} 0}  &amp;  {\color{red} 0} &amp; {\color{red} 1}  &amp;
+1  &amp; 3
+\end{pmatrix}
+\cdot
+\begin{pmatrix}
+x_1 \\
+x_2 \\
+x_3 \\
+x_4 \\
+x_5
+\end{pmatrix}
+=
+\begin{pmatrix}
+2 \\
+4 \\
+1 \\
+\end{pmatrix}
+\]</span> 由于矩阵 <span class="math inline">\(\mathbf{A}\)</span> 中前
+3 个列向量组成单位矩阵，所以是最简形式。可以把 <span
+class="math inline">\(x_1,x_2,x_3\)</span> 为基变量，直接写出基解：<span
+class="math inline">\(\mathbf{x} = (2, 4, 1, 0, 0)^T\)</span>。把前
+<span class="math inline">\(3\)</span> 个列向量作为基向量，矩阵的第
+<span class="math inline">\(4\)</span>
+个列向量可以写为基向量的线性组合，如下形式： <span
+class="math display">\[
+\begin{pmatrix}
+-2 \\
+5 \\
+1 \\
+\end{pmatrix}
+=
+-2 \cdot
+\begin{pmatrix}
+1 \\
+0 \\
+0 \\
+\end{pmatrix}
++
+5 \cdot
+\begin{pmatrix}
+0 \\
+1 \\
+0 \\
+\end{pmatrix}
++
+1 \cdot
+\begin{pmatrix}
+0 \\
+0 \\
+1 \\
+\end{pmatrix}
+\]</span></p>
+<h2 id="基变换">基变换</h2>
+<p>如果我们已经把线性规划化的矩阵 <span
+class="math inline">\(\mathbf{A}\)</span>
+转化为了最简形式，并找到一个基可行解 <span
+class="math inline">\(\mathbf{x}\)</span>。再给定一个非基变量 <span
+class="math inline">\(x_j\)</span> ，如果想要让 <span
+class="math inline">\(x_j\)</span> 成为基变量，应该对矩阵 <span
+class="math inline">\(\mathbf{A}\)</span> 做何种变换呢？</p>
+<p>设矩阵 <span class="math inline">\(\mathbf{A}\)</span> 的秩是 <span
+class="math inline">\(m\)</span>，由于矩阵 <span
+class="math inline">\(\mathbf{A}\)</span> 是最简形式，其基可行解的形式
+：<span class="math inline">\(\mathbf{x} =
+(b_1,b_2,...b_m,0,0,...,0)\)</span>，即： <span class="math display">\[
+\begin{equation}
+x_i =
+\left\{
+\begin{aligned}
+b_{i} &amp; , &amp; 1 \leq i \leq m, \quad &amp; x_i 是基变量 \\
+0 &amp; , &amp; m+1 \leq i \leq n, \quad &amp; x_i 是非基变量 \\
+\end{aligned}
+\right.
+\end{equation}
+\]</span> 将矩阵 <span class="math inline">\(\mathbf{A}\)</span>
+写成列向量的形式：<span class="math inline">\(\mathbf{A} =
+[\mathbf{a_1},\mathbf{a_2},...,\mathbf{a_n}]\)</span>。将基可行解带入线性方程组
+<span class="math inline">\(\mathbf{Ax=b}\)</span> 可得： <span
+class="math display">\[
+x_1 \mathbf{a_1} + x_2 \mathbf{a_2} + ... + x_n \mathbf{a_n} =
+\mathbf{b}
+\]</span> 由于当<span class="math inline">\(1 \leq i \leq
+m\)</span>时，<span class="math inline">\(x_i=b_i\)</span>； 当 <span
+class="math inline">\(i &gt; m\)</span> 时，<span
+class="math inline">\(x_i = 0\)</span>，所以方程简化为： <span
+class="math display">\[
+\begin{equation}
+b_1 \mathbf{a_1} + b_2 \mathbf{a_2} + ... + b_m \mathbf{a_m} =
+\mathbf{b} \tag{5}
+\end{equation}
+\]</span> 回顾基解的定义，当 <span class="math inline">\(j &gt;
+m\)</span> 时，<span
+class="math inline">\(\{\mathbf{a_1,a_2,...,a_m,a_j}\}\)</span>
+线性相关，<span class="math inline">\(\mathbf{a_j}\)</span>
+可以写成其他向量的线性组合，参考方程 <span
+class="math inline">\((4)\)</span> 即： <span class="math display">\[
+-a_{1j} \mathbf{a_1} - a_{2j} \mathbf{a_2} - ... - a_{mj} \mathbf{a_m} +
+\mathbf{a_j} = \mathbf{0}
+\]</span> 将上式两端同时乘上一个极小的正数 <span
+class="math inline">\(\varepsilon\)</span> 得： <span
+class="math display">\[
+\begin{equation}
+-\varepsilon a_{1j} \mathbf{a_1} - \varepsilon a_{2j} \mathbf{a_2} - ...
+- \varepsilon a_{mj} \mathbf{a_m} + \varepsilon \mathbf{a_j}= \mathbf{0}
+\tag{6}
+\end{equation}
+\]</span> <span class="math inline">\((5) + (6)\)</span> 可得： <span
+class="math display">\[
+\begin{equation}
+(b_1-\varepsilon a_{1j}) \mathbf{a_1} + (b_2-\varepsilon a_{2j})
+\mathbf{a_2} + ... + (b_m - \varepsilon a_{mj}) \mathbf{a_m} +
+\varepsilon \mathbf{a_j}= \mathbf{b} \tag{7}
+\end{equation}
+\]</span> 对于该方程，分为以下 <span class="math inline">\(2\)</span>
+种情况：</p>
+<ol type="1">
+<li><p>基变量全都是非退化的，即当<span class="math inline">\(1 \leq i
+\leq m\)</span> 时 <span class="math inline">\(x_i &gt;
+0\)</span>，那么当 <span class="math inline">\(\varepsilon\)</span>
+从一个极小的正数开始逐渐增大时，<span
+class="math inline">\(b_i-\varepsilon a_{ij}\)</span>
+可能会增加，也可以会降低，也可能保持不变。只要有任何一个降低（当 <span
+class="math inline">\(a_{ij} &gt; 0\)</span> 时），当 <span
+class="math inline">\(\varepsilon\)</span>
+增加的足够大时，可以找到第一个降低为零的 <span
+class="math inline">\(b_i-\varepsilon a_{ij}\)</span>
+，这时其他的系数，仍然大于等于零，这样就又找到了另外一个解：</p>
+<p><span class="math display">\[\mathbf{x} = (b_1-\varepsilon a_{1j},
+b_2-\varepsilon a_{2j}, ..., b_{i-1}-\varepsilon
+a_{i-1,j},b_{i+1}-\varepsilon a_{i+1,j},...,b_m-\varepsilon
+a_{mj},0,...,\varepsilon,0,...,0)\]</span></p>
+<p>由于将 <span class="math inline">\(\mathbf{a_j}\)</span> 写成了 <span
+class="math inline">\(\mathbf{a_1} \sim \mathbf{a_m}\)</span>
+的线性组合时，线性组合中 <span
+class="math inline">\(\mathbf{a_i}\)</span> 的系数 <span
+class="math inline">\(a_{ij}\)</span> 不为零，由定理一可知 <span
+class="math inline">\(\mathbf{a_j}\)</span>
+和其他剩余的列向量必然线性无关，这样就让 <span class="math inline">\(x_j
+= \varepsilon\)</span> 成为了新的基变量，同时 <span
+class="math inline">\(x_i\)</span> 退出基变量。但是当 <span
+class="math inline">\(1 \leq i \leq m\)</span> 时，哪一个 <span
+class="math inline">\(b_i - \varepsilon a_{ij}\)</span> 最先变为 <span
+class="math inline">\(0\)</span> 呢？把 <span
+class="math inline">\(\varepsilon\)</span> 视作变量，如果 <span
+class="math inline">\(a_{ij} &gt; 0\)</span> ，同时 <span
+class="math inline">\(\displaystyle \frac{b_i}{a_{ij}}\)</span>
+最小，就说明分量 <span class="math inline">\(b_i - \varepsilon
+a_{ij}\)</span> 最先变为 <span class="math inline">\(0\)</span>。</p>
+<p>给定一个特定的 <span class="math inline">\(j\)</span> 之后，如果增加
+<span class="math inline">\(\varepsilon\)</span> 时，没有 <span
+class="math inline">\(b_i-\varepsilon a_{ij}\)</span> 降低，即所有的
+<span class="math inline">\(a_{ij}\)</span> （第 <span
+class="math inline">\(j\)</span> 列）都小于等于 <span
+class="math inline">\(0\)</span>，说明当前基解不可能把 <span
+class="math inline">\(x_j\)</span> 换入为基变量。</p></li>
+<li><p>某个基变量是退化的，即存在某个 <span class="math inline">\(1 \leq
+i \leq m\)</span> ，使得 <span class="math inline">\(x_i =
+0\)</span>，也就是 <span class="math inline">\(b_i =
+0\)</span>。由于此时 <span class="math inline">\(x_j =
+0\)</span>，如果满足 <span class="math inline">\(a_{ij} \neq
+0\)</span>，在剔除 <span class="math inline">\(\mathbf{a_i}\)</span>
+之后，<span class="math inline">\(\mathbf{a_j}\)</span>
+和其他的基向量线性无关，只需要将 <span
+class="math inline">\(x_i\)</span> 换出，就能让 <span
+class="math inline">\(x_j\)</span>
+成为新的基变量。但是经过变换之后，新的基可行解仍然是退化的。而且经过变换之后，新的基可行解和变换前的基可行解完全相同，只是基变量不同而已。这种基变换并不会让线性规划朝着目标前进，所以是没有意义的，应该避免。能不能避免退化呢？还像处理情况
+<span class="math inline">\(1\)</span> 一样，考虑让 <span
+class="math inline">\(\varepsilon\)</span> 从零开始增大，如果 <span
+class="math inline">\(a_{ij} &gt; 0\)</span>，由于 <span
+class="math inline">\(b_i=0\)</span>，所以 <span
+class="math inline">\(b_i - \varepsilon a_{ij}\)</span>
+的值会降低，那么只能变为负数，负数不可能成为可行解。所以在 <span
+class="math inline">\(\varepsilon\)</span>
+从零开始增大时，只有当退化的基变量系数保持不变或者增加（<span
+class="math inline">\(a_{ij} \leq
+0\)</span>），某个非退化的基变量系数降低，才能使 <span
+class="math inline">\(x_j\)</span>
+换入为基变量，得到非退化的基可行解。<strong>在基变量退化的情况下，如果忽略了<span
+class="math inline">\(a_{ij}\)</span> 的符号，仍然按情况 <span
+class="math inline">\(1\)</span> 处理，可能出现某个 <span
+class="math inline">\(x_i\)</span> 为负数的情况，将 <span
+class="math inline">\(x_j\)</span>
+换入后，得到的不是可行解</strong>。</p></li>
+</ol>
+<p>如果可以使 <span class="math inline">\(x_j\)</span>
+换入为基变量，应该如何变换呢？通过对上面的分析可以知道：<strong>如果有退化的基变量（<span
+class="math inline">\(b_i = 0\)</span>），首先确保所有退化基对应的系数
+<span class="math inline">\(a_{ij} \leq
+0\)</span>，否则就只能变换到同一个退化的基可行解，这种变换没有意义；同时对于所有非退化基（<span
+class="math inline">\(b_i &gt; 0\)</span>），同时满足 <span
+class="math inline">\(a_{ij} &gt; 0\)</span> 的，取 <span
+class="math inline">\(\displaystyle \frac{b_i}{a_{ij}}\)</span>
+最小的行，将该行对应的 <span class="math inline">\(x_i\)</span>
+从基变量换出</strong>。如果上述情况不满足，说明无法把 <span
+class="math inline">\(x_j\)</span> 换入为基变量。</p>
+<blockquote>
+<p>有的做法是允许退化，但是可能出现死循环的情况，需要特殊的策略（比如
+Bland 法则）来解决这个问题。</p>
+</blockquote>
+<p><strong>例四</strong>：已知如下线性方程组，<span
+class="math inline">\(x_1,x_2,x_3\)</span> 为基变量，现在要把 <span
+class="math inline">\(x_4\)</span> 换入为基变量，应该如何操作？ <span
+class="math display">\[
+\begin{pmatrix}
+{\color{red} 1}  &amp;  {\color{red} 0} &amp; {\color{red} 0}  &amp;
+-2  &amp; 0 \\
+{\color{red} 0}  &amp;  {\color{red} 1} &amp; {\color{red} 0}  &amp;
+1  &amp; 1 \\
+{\color{red} 0}  &amp;  {\color{red} 0} &amp; {\color{red} 1}  &amp;
+2  &amp; 1
+\end{pmatrix}
+\cdot
+\begin{pmatrix}
+x_1 \\
+x_2 \\
+x_3 \\
+x_4 \\
+x_5
+\end{pmatrix}
+=
+\begin{pmatrix}
+1 \\
+3 \\
+4 \\
+\end{pmatrix}
+\]</span> 首先基解为：<span class="math inline">\(\mathbf{x} =
+(1,3,4,0,0)^T\)</span>，可以看到，基变量都是正数，所以没有退化的情况。找到第
+<span class="math inline">\(4\)</span> 列为正数的项：<span
+class="math inline">\(a_{2,4} = 1，a_{3,4} =
+2\)</span>，然后分别计算：<span
+class="math inline">\(\displaystyle\frac{b_2}{a_{2,4}} = 3\)</span> 和
+<span class="math inline">\(\displaystyle\frac{b_3}{a_{3,4}} =
+2\)</span>，可以看到 <span
+class="math inline">\(\displaystyle\frac{b_2}{a_{2,4}} &gt;
+\frac{b_3}{a_{3,4}}\)</span>。在第 <span
+class="math inline">\(4\)</span> 列中，因为 <span
+class="math inline">\(\displaystyle\frac{b_3}{a_{3,4}}\)</span>
+为正数，且最小，所以可以把 <span class="math inline">\(x_3\)</span>
+换出基变量，可以保证 <span class="math inline">\(\mathbf{x} =
+(x_1,x_2,0,x_4,0)^T\)</span>
+为基可行解。如何求出新的基可行解的值呢？由于新的基向量组成的矩阵不是单位矩阵，无法直接把新的基可行解写出来。我们希望把它转换为最简形式，可以这样操作，因为要把
+<span class="math inline">\(x_3\)</span> 换出，<span
+class="math inline">\(x_4\)</span> 换入，所以要以第 <span
+class="math inline">\(3\)</span> 行作为基准，通过高斯消元法把第 <span
+class="math inline">\(4\)</span> 列其他的元素变为 <span
+class="math inline">\(0\)</span>。</p>
+<p>第一步：将矩阵转换为增广矩阵 <span
+class="math inline">\([\mathbf{A|b}]\)</span>。 <span
+class="math display">\[
+\left (
+\begin{array}{ccccc|c}
+1 &amp; 0 &amp; 0 &amp; -2 &amp; 0 &amp; 1 \\
+0 &amp; 1 &amp; 0 &amp; 1 &amp; 1 &amp; 3 \\
+0 &amp; 0 &amp; 1 &amp; 2 &amp; 1 &amp; 4 \\
+\end{array}
+\right )
+\]</span> 第二步：把第 <span class="math inline">\(3\)</span> 行除以
+<span class="math inline">\(2\)</span>，以把 <span
+class="math inline">\(a_{3,4}\)</span> 变为 <span
+class="math inline">\(1\)</span>，可得： <span class="math display">\[
+\left (
+\begin{array}{ccccc|c}
+1 &amp; 0 &amp; 0 &amp; -2 &amp; 0 &amp; 1 \\
+0 &amp; 1 &amp; 0 &amp; 1 &amp; 1 &amp; 3 \\
+0 &amp; 0 &amp; \frac{1}{2} &amp; 1 &amp; \frac{1}{2} &amp; 2 \\
+\end{array}
+\right )
+\]</span> 第三步：<span class="math inline">\((1) + 2 \times
+(3)\)</span> 同时 <span class="math inline">\((2) - (3)\)</span>
+，可得： <span class="math display">\[
+\left (
+\begin{array}{ccccc|c}
+{\color{red} 1} &amp; {\color{red} 0} &amp; 1 &amp; {\color{red} 0}
+&amp; 1 &amp; 5 \\
+{\color{red} 0} &amp; {\color{red} 1} &amp; -\frac{1}{2} &amp;
+{\color{red} 0} &amp; \frac{1}{2} &amp; 1 \\
+{\color{red} 0} &amp; {\color{red} 0} &amp; \frac{1}{2} &amp;
+{\color{red} 1} &amp; \frac{1}{2} &amp; 2 \\
+\end{array}
+\right )
+\]</span> 这样第 <span class="math inline">\(1,2,4\)</span>
+列就形成了一个新的单位矩阵，新的基可行解为：<span
+class="math inline">\(\mathbf{x} = (5,1,0,2,0)^T\)</span></p>
+<p>在例四的操作，也称为 Pivot
+操作，翻译为中文有的为旋转，有的为转轴，其实就是高斯消元法，目的是为了形成一个新的单位矩阵，让下一步基变量的替换操作可以继续进行下去。</p>
+<p><strong>例五</strong>：考虑如下线性规划方程组， <span
+class="math inline">\(x_1,x_2,x_3\)</span>为基变量，问能否把 <span
+class="math inline">\(x_4\)</span> 替换为基变量，获取一个新的基可行解？
+<span class="math display">\[
+\begin{pmatrix}
+{\color{red} 1}  &amp;  {\color{red} 0} &amp; {\color{red} 0}  &amp; 1
+\\
+{\color{red} 0}  &amp;  {\color{red} 1} &amp; {\color{red} 0}  &amp; 1
+\\
+{\color{red} 0}  &amp;  {\color{red} 0} &amp; {\color{red} 1}  &amp; 2
+\end{pmatrix}
+\cdot
+\begin{pmatrix}
+x_1 \\
+x_2 \\
+x_3 \\
+x_4
+\end{pmatrix}
+=
+\begin{pmatrix}
+2 \\
+1 \\
+0 \\
+\end{pmatrix}
+\]</span>
+注意到该方程最左边的三个列向量形成了一个单位矩阵，所以已经是最简形式了，令
+<span class="math inline">\(x_4=0\)</span>， 可以求得对应基解：<span
+class="math inline">\(\mathbf{x} = (2,1,0,0)^T\)</span>。由于 <span
+class="math inline">\(x_3\)</span> 也为 <span
+class="math inline">\(0\)</span>，所以该基解是退化的。由于 <span
+class="math inline">\(a_{3,4} \neq 0\)</span>，所以可以直接让 <span
+class="math inline">\(x_3\)</span> 退出基变量，同时让 <span
+class="math inline">\(x_4\)</span>
+加入基变量，对应的基可行解仍然是：<span class="math inline">\(\mathbf{x}
+= (2,1,0,0)^T\)</span> 。这只是换了基变量，并没有获得新的基可行解。</p>
+<p>另一方面由于 <span class="math inline">\(a_{3,4} &gt;
+0\)</span>，通过上述对情况 <span class="math inline">\(2\)</span>
+的讨论知道，新的基可行解，是不可能把 <span
+class="math inline">\(x_4\)</span> 换入作为基变量的。如果强行把 <span
+class="math inline">\(x_4\)</span> 换入呢？由于 <span
+class="math inline">\(\displaystyle \frac{b_1}{a_{1,4}} =
+2\)</span>，<span class="math inline">\(\displaystyle
+\frac{b_2}{a_{2,4}} = 1\)</span>，所以 <span
+class="math inline">\(\displaystyle \frac{b_1}{a_{1,4}} &gt;
+\frac{b_2}{a_{2,4}}\)</span>，所以 <span
+class="math inline">\(\displaystyle\frac{b_2}{a_{2,4}}\)</span>
+最小，要把 <span class="math inline">\(x_2\)</span> 从基变量中换出。把第
+<span class="math inline">\(2\)</span> 行作为基准，对其他行做消元，把第
+<span class="math inline">\(4\)</span> 列其他元素变为 <span
+class="math inline">\(0\)</span>。</p>
+<p>第一步：将矩阵转换为增广矩阵 <span
+class="math inline">\([\mathbf{A|b}]\)</span> <span
+class="math display">\[
+\left (
+\begin{array}{cccc|c}
+1 &amp; 0 &amp; 0 &amp; 1 &amp; 2 \\
+0 &amp; 1 &amp; 0 &amp; 1 &amp; 1 \\
+0 &amp; 0 &amp; 1 &amp; 2 &amp; 0 \\
+\end{array}
+\right )
+\]</span> 第一步：<span class="math inline">\((1)-(2)\)</span>，同时
+<span class="math inline">\((3)-2\times(2)\)</span> 可得 <span
+class="math display">\[
+\left (
+\begin{array}{cccc|c}
+1 &amp; -1 &amp; 0 &amp; 0 &amp; 1 \\
+0 &amp; 1 &amp; 0 &amp; 1 &amp; 1 \\
+0 &amp; -2 &amp; 1 &amp; 0 &amp; -2 \\
+\end{array}
+\right )
+\]</span> 令 <span class="math inline">\(x_2\)</span>
+为零，求的基解：<span class="math inline">\(\mathbf{x} =
+(1,0,-2,1)^T\)</span>，由于 <span class="math inline">\(x_3 &lt;
+0\)</span> ，所以不是基可行解。</p>
+<p>由此可见，在处理线性规划问题时，如果遇到了退化的基可行解时，如果仍然盲目套用旋转操作，可能转换到一个非可行解，从而得到一个错误的结果。</p>
+<h2 id="迭代算法">迭代算法</h2>
+<p>在前面的介绍中，基变换、转轴操作都可以和目标函数无关，如果有了目标函数，能不能让基变换朝着离目标值更近的方向迭代，经过有限次的基变换，达到目标值？基变换需要假设我们已经获取到了一个基可行解，然后才能做新的变换。仍然有
+<span class="math inline">\(2\)</span> 个问题需要解决：</p>
+<ol type="1">
+<li>当前基可行解是否已经达到了最优？</li>
+<li>如果当前基可行解不是最优的，下一步应该那一个非基变量换入？</li>
+</ol>
+<h3 id="最优判定">最优判定</h3>
+<p>首先来看，如何判断当前可行解是否为最优解。</p>
+<p>这里给定目标：<span class="math inline">\(\max : c_1 \cdot x_1 + c_2
+\cdot x_2 + ... + c_n \cdot x_n\)</span>，将单纯形法约束化为最简形式：
+<span class="math display">\[
+\begin{pmatrix}
+1 &amp; 0 &amp; \dots &amp; 0 &amp; a_{1,m+1} &amp; a_{1,m+2}, &amp;
+\dots &amp; a_{1,n} \\
+0 &amp; 1 &amp; \dots &amp; 0 &amp; a_{2,m+1} &amp; a_{2,m+2}, &amp;
+\dots &amp; a_{2,n} \\
+\vdots &amp; \vdots &amp; \ddots &amp; \vdots \\
+0 &amp; 0 &amp; \dots &amp; 1 &amp; a_{m,m+1} &amp; a_{m,m+2}, &amp;
+\dots &amp; a_{m,n}
+\end{pmatrix}
+\cdot
+\begin{pmatrix}
+x_1 \\
+x_2 \\
+\vdots \\
+x_n
+\end{pmatrix}
+=
+\begin{pmatrix}
+b_1 \\
+b_2 \\
+\vdots \\
+b_m \\
+\end{pmatrix}
+\]</span> 写成线性方程组的形式，并移项可得： <span
+class="math display">\[
+\begin{aligned}
+x_1 &amp;= b_1 - (a_{1,m+1} \cdot x_{m+1} + a_{1,m+2} \cdot x_{m+2} +
+... + a_{1,n} \cdot x_{n}) \\
+x_2 &amp;= b_2 - (a_{2,m+1} \cdot x_{m+1} + a_{2,m+2} \cdot x_{m+2} +
+... + a_{2,n} \cdot x_{n}) \\
+... \\
+x_m &amp;= b_m - (a_{m,m+1} \cdot x_{m+1} + a_{m,m+2} \cdot x_{m+2} +
+... + a_{m,n} \cdot x_{n}) \\
+\end{aligned}
+\]</span>
+这样就把所有的基变量用非基变量表示出来了，因此目标函数也可以只用非基变量表示。</p>
+<p><strong>例六</strong>：考察线性规划问题，目标 <span
+class="math inline">\(\max：z = x_1 + 3x_2\)</span>，约束为: <span
+class="math display">\[
+\begin{pmatrix}
+1  &amp;  0 &amp; 0  &amp; -2  &amp; 0 \\
+0  &amp;  1 &amp; 0  &amp; 1  &amp; 1 \\
+0  &amp;  0 &amp; 1  &amp; 2  &amp; 1
+\end{pmatrix}
+\cdot
+\begin{pmatrix}
+x_1 \\
+x_2 \\
+x_3 \\
+x_4 \\
+x_5
+\end{pmatrix}
+=
+\begin{pmatrix}
+1 \\
+3 \\
+4 \\
+\end{pmatrix}
+\]</span> 并且：<span class="math inline">\(x_i \geq 0\)</span>，其中
+<span class="math inline">\(1 \leq i \leq 5\)</span></p>
+<p>由于已经是线性规划最简形式了，可以直接写出基可行解 <span
+class="math inline">\(\mathbf{x} =
+(1,3,4,0,0)^T\)</span>，同时对线性方程组移项可得： <span
+class="math display">\[
+\begin{aligned}
+x_1 &amp;= 1 - (-2 \cdot x_4 + 0 \cdot x_5) \\
+x_2 &amp;= 3 - (1 \cdot x_4 + 1 \cdot x_5) \\
+x_3 &amp;= 4 - (2 \cdot x_4 + 1 \cdot x_5)
+\end{aligned}
+\]</span> 将 <span class="math inline">\(x_1，x_2\)</span>
+带入目标可得：<span class="math inline">\(z=1 - (-2 \cdot x_4 + 0 \cdot
+x_5) + 3(3 - (1 \cdot x_4 + 1 \cdot x_5)) = 10 - x_4 -
+3x_5\)</span>。由于 <span class="math inline">\(x_4,x_5\)</span>
+是是非基变量，在基可行解中，取值为 <span
+class="math inline">\(0\)</span>，可以得到当前目标值 <span
+class="math inline">\(z_0=
+10\)</span>。于此同时，在任意一个可行解中，<span
+class="math inline">\(x_4 \geq 0, x_5 \geq 0\)</span>，都有 <span
+class="math inline">\(z=10 - x_4 - 3x_5 \leq 10\)</span>。所以目标值
+<span class="math inline">\(z\)</span> 最大取值为 <span
+class="math inline">\(10\)</span>，取值条件为当前的基解：<span
+class="math inline">\(\mathbf{x} = (1,3,4,0,0)^T\)</span>。</p>
+<p>上述例子给了我们判定当前基解是否为最优解的思路：首先要求当前已经是最简形式了，同时有一个基可行解。然后对于目标函数，把基变量都用非基变量表示。如果目标函数中，所有非基变量的系数都是负数，说明当前基解就是优解；否则需要选择一个新的基，继续进行基变换。</p>
+<p>具体的证明和例六是一样的，只不过需要多一些形式化的描述，这里就不展开了。</p>
+<h3 id="选取基">选取基</h3>
+<p>如果最优判定失败了，说明在目标公式中一定存在某个非基变量，系数为正，那么就可以把该变量换入为基变量。</p>
+<p><strong>定理五</strong>：已知线性规划中，目标公式 <span
+class="math inline">\(z=C + c_{m+1}\cdot x_{m+1} + ... + c_{n} \cdot
+x_{n}\)</span> ，其中 <span class="math inline">\(C\)</span>
+为常数项，<span class="math inline">\(x_{m+1} \sim x_{n}\)</span>
+都是非基变量。如果存在某个非基变量 <span
+class="math inline">\(x_{j}\)</span> 的系数系数 <span
+class="math inline">\(c_j &gt; 0\)</span> ，而且可以把 <span
+class="math inline">\(x_{j}\)</span> 换入为基变量。那么把 <span
+class="math inline">\(x_{j}\)</span>
+换入为基变量之后，目标公式中的常数项 <span
+class="math inline">\(C\)</span>
+要么不变，要么增加，取决于换出的基变量是否退化。</p>
+<p><strong>证明</strong>：这里仍然只考虑线性方程组已经被转化为最简形式，<span
+class="math inline">\(x_1 \sim x_m\)</span> 是基变量，<span
+class="math inline">\(x_{m+1} \sim x_n\)</span> 是非基变量。 <span
+class="math display">\[
+\begin{pmatrix}
+1 &amp; 0 &amp; \dots &amp; 0 &amp; a_{1,m+1} &amp; a_{1,m+2}, &amp;
+\dots &amp; a_{1,n} \\
+0 &amp; 1 &amp; \dots &amp; 0 &amp; a_{2,m+1} &amp; a_{2,m+2}, &amp;
+\dots &amp; a_{2,n} \\
+\vdots &amp; \vdots &amp; \ddots &amp; \vdots \\
+0 &amp; 0 &amp; \dots &amp; 1 &amp; a_{m,m+1} &amp; a_{m,m+2}, &amp;
+\dots &amp; a_{m,n}
+\end{pmatrix}
+\cdot
+\begin{pmatrix}
+x_1 \\
+x_2 \\
+\vdots \\
+x_n
+\end{pmatrix}
+=
+\begin{pmatrix}
+b_1 \\
+b_2 \\
+\vdots \\
+b_m \\
+\end{pmatrix}
+\]</span></p>
+<p>假设将 <span class="math inline">\(x_{j}\)</span>
+换入为基变量的同时，<span class="math inline">\(x_i\)</span>
+被换出为非基变量，在目标函数中，<span class="math inline">\(x_j\)</span>
+也需要被 <span class="math inline">\(x_i\)</span>
+替代。由于目标函数的形式为：<span class="math inline">\(z=C+c_j \cdot
+x_{j} + P\)</span>，其中 <span
+class="math inline">\(P=\sum\limits_{k=1}^{j-1}c_k\cdot x_{k} +
+\sum\limits_{k=j+1}^{n}c_k\cdot x_{k}\)</span>。由于在非基变量中，只有
+<span class="math inline">\(x_j\)</span>
+变成了基变量，所以基变换之后，目标函数中的 <span
+class="math inline">\(P\)</span> 不会改变，只有 <span
+class="math inline">\(c_j \cdot x_{j}\)</span> 会被 <span
+class="math inline">\(x_i\)</span> 的一次项多项式替代。考察第 <span
+class="math inline">\(i\)</span> 个约束方程： <span
+class="math display">\[
+1 \cdot x_i + a_{i,m+1} \cdot x_{m+1} + ... + a_{i,j} \cdot x_{j} + ...
++ a_{i,n} \cdot x_{n} = b_i
+\]</span> 等式两边同时除以 <span class="math inline">\(a_{ij}\)</span>
+得： <span class="math display">\[
+\frac{1}{a_{ij}} \cdot x_i + \frac{a_{i,m+1}}{a_{ij}} \cdot x_{m+1} +
+... + 1 \cdot x_{j} + ... + \frac{a_{i,n}}{a_{ij}} \cdot x_{n} = b_i
+\]</span> 移项可得： <span class="math display">\[
+\begin{aligned}
+x_{j} &amp;= b_i - (\frac{1}{a_{ij}} \cdot x_i +
+\frac{a_{i,m+1}}{a_{ij}} \cdot x_{m+1} + ...+
+\frac{a_{i,j-1}}{a_{i,j-1}} \cdot x_{j-1} + \frac{a_{i,j+1}}{a_{i,j+1}}
+\cdot x_{j+1} + ... + \frac{a_{i,n}}{a_{ij}} \cdot x_{n}) \\
+      &amp;= b_i - Q
+\end{aligned}
+\]</span> 上述式子中 <span class="math inline">\(Q\)</span> 仍然是 <span
+class="math inline">\(x_1 \sim x_n\)</span> 的线性组合，而常数项只有
+<span class="math inline">\(b_i\)</span>。把 <span
+class="math inline">\(x_j\)</span> 带入目标函数可得： <span
+class="math display">\[
+\begin{aligned}
+z &amp;= C + c_j \cdot x_j + P \\
+  &amp;= C + c_j \cdot (b_i - Q) + P \\
+  &amp;= (C + c_j \cdot b_i) - c_j \cdot Q + P
+\end{aligned}
+\]</span> 在该式子中 <span class="math inline">\(-c_j \cdot Q +
+P\)</span> 为 <span class="math inline">\(x_1 \sim x_n\)</span>
+的线性组合，常数项为 <span class="math inline">\(C+c_j \cdot
+b_i\)</span>，由于 <span class="math inline">\(c_j &gt; 0\)</span>，对
+<span class="math inline">\(b_i\)</span> 分两种情况讨论：</p>
+<ol type="1">
+<li><span class="math inline">\(b_i = 0\)</span>，说明 <span
+class="math inline">\(x_i\)</span> 是退化的基变量，这时 <span
+class="math inline">\(C + c_j \cdot b_i = C\)</span>，即把 <span
+class="math inline">\(x_j\)</span>
+换入为基变量之后，目标函数中的常数项保持不变。前面基变换的小节已经讨论过这种情况，应该避免把退化的基变量换出，因为不会得到新的可行解。</li>
+<li><span class="math inline">\(b_i &gt; 0\)</span>，说明 <span
+class="math inline">\(x_i\)</span> 是没有退化的基变量，这时 <span
+class="math inline">\(C + c_j \cdot b_i &gt; C\)</span>，把 <span
+class="math inline">\(x_j\)</span>
+换入为基变量之后，目标函数中的常数项增加 <span class="math inline">\(c_j
+\cdot b_i\)</span>。</li>
+</ol>
+<p>证毕！</p>
+<p>通过上述定理可以知道，在非退化场景下，如果目标函数中 <span
+class="math inline">\(x_j\)</span> 的系数为正，把 <span
+class="math inline">\(x_j\)</span>
+换入作为基变量之后，得到的新基可行解一定比原基可行解更加接近目标值。如果所有系数为正的非基变量，都不能换入为基变量，说明可行域中已经没有顶点使得目标值更大，该目标的解是无界的。为什么不是无解呢？因为单纯形法的初始条件是从一个基可行解出发，所以一定有解。</p>
+<blockquote>
+<p>通过以上定理可以知道，通过一次单纯形法的基变换，目标函数的增量为：<span
+class="math inline">\(c_j \cdot
+b_i\)</span>。如果遍历所有非基变量，找到所有满足条件的 <span
+class="math inline">\(c_j \cdot
+b_i\)</span>，然后选取一个最大的值，把对应的 <span
+class="math inline">\(x_j\)</span>
+换入为基变量，能够最大幅度的提升单纯形法迭代速度。但是会增加代码复杂度，为了简化起见，本文不会使用这个策略，如果感兴趣，可由读者自行实现。</p>
+</blockquote>
+<p><strong>例七</strong>：求下列线性规划的最优可行解以及对应的最优值。</p>
+<p>目标：<span class="math inline">\(\max：z = x_1 + 3x_2 -
+x_3\)</span></p>
+<p>约束： <span class="math display">\[
+\begin{pmatrix}
+1 &amp; 0 &amp; 0 &amp; 1 &amp; 2 \\
+0 &amp; 1 &amp; 0 &amp; 2 &amp; -1 \\
+0 &amp; 0 &amp; 1 &amp; 1 &amp; 3 \\
+\end{pmatrix}
+\cdot
+\begin{pmatrix}
+x_1 \\
+x_2 \\
+x_3 \\
+x_4 \\
+x_5 \\
+\end{pmatrix}
+=
+\begin{pmatrix}
+2 \\
+2 \\
+6 \\
+\end{pmatrix}
+\]</span> 其中：<span class="math inline">\(x_i \geq 0\)</span>，<span
+class="math inline">\(1 \leq i \leq 5\)</span></p>
+<p><strong>解法一</strong>：带入法求解，该方法易于理解，但是手动运算比较多。首先可以看到，约束方程中，已经出现了一个单位矩阵，在该形式下可以直接写出一个基解：<span
+class="math inline">\(\mathbf{x} =
+(2,2,6,0,0)^T\)</span>。与此同时，我们可以对约束方程做变形，把所有的基变量
+<span class="math inline">\(x_1,x_2,x_3\)</span> 都用非基变量 <span
+class="math inline">\(x_4\)</span> 和 <span
+class="math inline">\(x_5\)</span> 表示： <span class="math display">\[
+\begin{aligned}
+x_1 &amp;= 2 -x_4 -2x_5  \\
+x_2 &amp;= 2 -2x_4 +x_5  \\
+x_3 &amp;= 6 -x_4 -3x_5
+\end{aligned}
+\]</span> 带入到目标函数 <span class="math inline">\(z\)</span> 可得：
+<span class="math display">\[
+\begin{aligned}
+z &amp;= x_1 + 3x_2 - x_3 \\
+  &amp;= (2-x_4-2x_5) + 3 \cdot (2-2x_4+x_5) - (6 - x_4 -3x_5) \\
+  &amp;= 2 - 6x_4 + 4x_5
+\end{aligned}
+\]</span> 可以看到，在当前基可行解 <span
+class="math inline">\(\mathbf{x} = (2,2,6,0,0)^T\)</span>
+的情况下，目标函数 <span class="math inline">\(z\)</span> 取值为 <span
+class="math inline">\(2\)</span>。由于在当前基可行解中 <span
+class="math inline">\(x_5\)</span> 为 <span
+class="math inline">\(0\)</span>，而目标函数中，<span
+class="math inline">\(x_5\)</span> 的系数为正数，如果 <span
+class="math inline">\(x_5\)</span>
+增大的话，可以提高函数的取值，所以可以让 <span
+class="math inline">\(x_5\)</span>
+成为新的基变量（只有基变量才不为零）。查看线性方程组的系数矩阵第 <span
+class="math inline">\(5\)</span> 列，只有 <span
+class="math inline">\(a_{1,5}\)</span> 和 <span
+class="math inline">\(a_{3,5}\)</span> 为正数，并且 <span
+class="math inline">\(\displaystyle \frac{b_1}{a_{1,5}} &lt;
+\frac{b_3}{a_{3,5}}\)</span>，所以应该把 <span
+class="math inline">\(x_1\)</span>
+从基变量中换出。首先写出线性方程组的增广矩阵 <span
+class="math inline">\(\mathbf{[A|b]}\)</span>： <span
+class="math display">\[
+\left (
+\begin{array}{ccccc|c}
+1 &amp; 0 &amp; 0 &amp; 1 &amp; 2 &amp; 2 \\
+0 &amp; 1 &amp; 0 &amp; 2 &amp; -1 &amp; 2 \\
+0 &amp; 0 &amp; 1 &amp; 1 &amp; 3 &amp; 6 \\
+\end{array}
+\right )
+\]</span> 现在要用第 <span class="math inline">\(1\)</span> 行，第 <span
+class="math inline">\(5\)</span> 列，把第 <span
+class="math inline">\(5\)</span> 列的其他元素都消为 <span
+class="math inline">\(0\)</span>。首先应该把 <span
+class="math inline">\(a_{1,5}\)</span> 变为 <span
+class="math inline">\(1\)</span>，操作为 <span
+class="math inline">\(\displaystyle (1) \times \frac{1}{2}\)</span>
+<span class="math display">\[
+\left (
+\begin{array}{ccccc|c}
+\frac{1}{2} &amp; 0 &amp; 0 &amp; \frac{1}{2} &amp; 1 &amp; 1 \\
+0 &amp; 1 &amp; 0 &amp; 2 &amp; -1 &amp; 2 \\
+0 &amp; 0 &amp; 1 &amp; 1 &amp; 3 &amp; 6 \\
+\end{array}
+\right )
+\]</span> 然后 <span class="math inline">\((2) + (1)\)</span> 和 <span
+class="math inline">\((3) - 3 \times (1)\)</span>: <span
+class="math display">\[
+\left (
+\begin{array}{ccccc|c}
+\frac{1}{2} &amp; 0 &amp; 0 &amp; \frac{1}{2} &amp; 1 &amp; 1 \\
+\frac{1}{2} &amp; 1 &amp; 0 &amp; \frac{5}{2} &amp; 0 &amp; 3 \\
+-\frac{3}{2} &amp; 0 &amp; 1 &amp; -\frac{1}{2} &amp; 0 &amp; 3 \\
+\end{array}
+\right )
+\]</span> 矩阵的第 <span class="math inline">\(2,3,5\)</span>
+列可以组成新的单位矩阵，对应基解为：<span
+class="math inline">\(\mathbf{x} =
+(0,3,3,0,1)^T\)</span>。写出矩阵的第一行对应的方程： <span
+class="math display">\[
+\frac{1}{2} \cdot x_1 + 0\cdot x_2 + 0\cdot x_3 + \frac{1}{2} \cdot x_4
++ 1 \cdot x_5 = 1
+\]</span> 移项可得： <span class="math display">\[
+x_5 = 1 - \frac{1}{2} \cdot x_1 - \frac{1}{2} \cdot x_4
+\]</span> 带入目标函数中： <span class="math display">\[
+\begin{aligned}
+z &amp;= 2 - 6x_4 + 4x_5 \\
+  &amp;= 2 - 4x_4 + 4 \cdot (1 - \frac{1}{2} \cdot x_1 - \frac{1}{2}
+\cdot x_4) \\
+  &amp;= 6 - 2x_1 - 6x_4
+\end{aligned}
+\]</span> 即把基解 <span class="math inline">\(\mathbf{x} =
+(0,3,3,0,1)^T\)</span> 带入目标函数可取得目标值 <span
+class="math inline">\(6\)</span>，由于 <span class="math inline">\(z = 6
+- 2x_1 - 6x_4 \leq 6\)</span>，所以目标函数的最大值为 <span
+class="math inline">\(6\)</span>。</p>
+<p><strong>解法二</strong>：高斯消元法求解，该方法以矩阵操作为主，便于用程序化实现，其本质和方法一没有区别。从方法一对线性方程组使用高斯消元，但是对目标函数使用的是带入法。实际上可以把目标函数也加入到线性方程组中，这样使用高斯消元法的时候能把目标函数做消元。
+<span class="math display">\[
+\begin{pmatrix}
+1 &amp; 0 &amp; 0 &amp; 1 &amp; 2 \\
+0 &amp; 1 &amp; 0 &amp; 2 &amp; -1 \\
+0 &amp; 0 &amp; 1 &amp; 1 &amp; 3 \\
+1 &amp; 3 &amp; -1 &amp; 0 &amp; 0 \\
+\end{pmatrix}
+\cdot
+\begin{pmatrix}
+x_1 \\
+x_2 \\
+x_3 \\
+x_4 \\
+x_5 \\
+\end{pmatrix}
+=
+\begin{pmatrix}
+2 \\
+2 \\
+6 \\
+z \\
+\end{pmatrix}
+\]</span></p>
+<p>把原有的线性方程组和目标函数拼接为一个大矩阵 <span
+class="math inline">\(\mathbf{S}\)</span>： <span
+class="math display">\[
+\left (
+\begin{array}{ccccc|c}
+1 &amp; 0 &amp; 0 &amp; 1 &amp; 2 &amp; 2 \\
+0 &amp; 1 &amp; 0 &amp; 2 &amp; -1 &amp; 2 \\
+0 &amp; 0 &amp; 1 &amp; 1 &amp; 3 &amp; 6 \\
+\hline
+1 &amp; 3 &amp; -1 &amp; 0 &amp; 0 &amp; z
+\end{array}
+\right )
+\]</span> 仍然像解法一一样，找到 <span class="math inline">\(3\)</span>
+个基向量，确定初始可行解：<span class="math inline">\(\mathbf{x} =
+(2,2,6,0,0)^T\)</span>。然后用高斯消元法，把矩阵 <span
+class="math inline">\(\mathbf{S}\)</span>
+的最后一行中，基向量对应的分量消除，依次执行操作：<span
+class="math inline">\((4)-(1),(4)-3\times(2),(4)+(3)\)</span>，矩阵
+<span class="math inline">\(\mathbf{S}\)</span> 可转化为： <span
+class="math display">\[
+\left (
+\begin{array}{ccccc|c}
+1 &amp; 0 &amp; 0 &amp; 1 &amp; 2 &amp; 2 \\
+0 &amp; 1 &amp; 0 &amp; 2 &amp; -1 &amp; 2 \\
+0 &amp; 0 &amp; 1 &amp; 1 &amp; 3 &amp; 6 \\
+\hline
+0 &amp; 0 &amp; 0 &amp; -6 &amp; 4 &amp; z-2
+\end{array}
+\right )
+\]</span> 观察矩阵 <span class="math inline">\(\mathbf{S}\)</span>
+的最后一行，第 <span class="math inline">\(5\)</span>
+列为正数，所以可以把 <span class="math inline">\(x_5\)</span>
+换入为基变量；然后观察第 <span class="math inline">\(5\)</span>
+列的正数项所在行，可得 <span class="math inline">\(\displaystyle
+\frac{b_1}{a_{1,5}} &lt; \frac{b_3}{a_{3,5}}\)</span>。所以应该把 <span
+class="math inline">\(x_1\)</span> 从基变量中换出。为了继续把矩阵 <span
+class="math inline">\(\mathbf{S}\)</span> 化简，需要用第 <span
+class="math inline">\(1\)</span> 行，把其他行的第 <span
+class="math inline">\(5\)</span> 列都消为 <span
+class="math inline">\(0\)</span>。变换的方法和解法一类似，只不过矩阵的最后一行也参与变换，最终结果为：
+<span class="math display">\[
+\left (
+\begin{array}{ccccc|c}
+\frac{1}{2} &amp; 0 &amp; 0 &amp; \frac{1}{2} &amp; 1 &amp; 1 \\
+\frac{1}{2} &amp; 1 &amp; 0 &amp; \frac{5}{2} &amp; 0 &amp; 3 \\
+-\frac{3}{2} &amp; 0 &amp; 1 &amp; -\frac{1}{2} &amp; 0 &amp; 3 \\
+\hline
+-2 &amp; 0 &amp; 0 &amp; -6 &amp; 0 &amp; z-6
+\end{array}
+\right )
+\]</span> 矩阵最后一行对应的方程为<span class="math inline">\(- 2x_1 -
+6x_4 = z - 6\)</span>，移项得：<span class="math inline">\(z = 6 - 2x_1
+- 6x_4\)</span>。对应的基可行解：<span class="math inline">\(\mathbf{x}
+= (0,3,3,0,1)^T\)</span>，取得的目标值：<span
+class="math inline">\(6\)</span></p>
+<h3 id="避免退化基变换单纯形算法">避免退化基变换单纯形算法</h3>
+<p>在基变换过程中，如果允许从一个退化的基可行解变换为另一个退化的基可行解，在单纯形法的实施过程中，有可能出现环的情况，永远无法退出。通过前文的介绍，如果单纯形法中出现了一个退化的可行解，要么当前解就是最优解；要么可以通过基变换，变换到另外一个基可行解，使得目标函数进一步靠近目标值。通过避免退化的方法，可以使每一个基变换的迭代，目标函数都更加靠近目标值。所以通过有限步的迭代，可以达到目标值，永远不会出现死循环的情况。算法步骤如下：</p>
+<ol type="1">
+<li><p>初始化矩阵：初始化单纯形矩阵 <span
+class="math inline">\(\mathbf{S}\)</span> 为如下形式： <span
+class="math display">\[
+\left [
+\begin{array}{c|c}
+\mathbf{A} &amp; \mathbf{b} \\
+\mathbf{c^T} &amp; 0
+\end{array}
+\right]
+\]</span></p></li>
+<li><p>初始化基可行解：找到一个初始的基可行解 <span
+class="math inline">\(\mathbf{x}\)</span></p></li>
+<li><p>最优判定：判定矩阵 <span
+class="math inline">\(\mathbf{S}\)</span>
+的最后一行元素，是否除了最后一个之外，其他元素都小于等于零。如果是说明当前基可行解可使目标函数达到最优，最优值为矩阵
+<span class="math inline">\(\mathbf{S}\)</span>
+最后一行最后一列的相反数，算法结束；否则进入下一步</p></li>
+<li><p>换入基选择：对于矩阵 <span
+class="math inline">\(\mathbf{S}\)</span> 的最后一行，找到一个 <span
+class="math inline">\(c_j\)</span> 为正的值，判定 <span
+class="math inline">\(x_j\)</span>
+是否能成为换入的基变量。判定方法为，首先判断是否有 <span
+class="math inline">\(b_i = 0\)</span>
+的情况，如果没有这种情况，进入下一步。否则说明有退化的基变量，判定对应的
+<span class="math inline">\(a_{ij} &lt; 0\)</span>
+是否成立，如果成立进入下一步。否则说明把 <span
+class="math inline">\(x_j\)</span>
+换入不会得到新的基可行解。需要寻找另一个换入的基变量，在矩阵 <span
+class="math inline">\(\mathbf{S}\)</span> 的最后一行，找到另一个 <span
+class="math inline">\(c_j &gt; 0\)</span>。如果找到了，重复执行第 4
+步；如果没找到，说明目标函数是无界的，算法终止。</p></li>
+<li><p>换出基选择：计算 <span class="math inline">\(i
+=  \mathop{argmin}\limits_{k}\displaystyle
+\frac{b_k}{a_{kj}}\)</span>，且 <span
+class="math inline">\(\displaystyle\frac{b_k}{a_{kj}} &gt;
+0\)</span>。如果能找到符合条件的 <span
+class="math inline">\(i\)</span>，说明可以把 <span
+class="math inline">\(x_i\)</span>
+从基变量中换出，进入下一步。否则说明目标函数是无界的，算法终止。</p></li>
+<li><p>矩阵最简化：第 <span class="math inline">\(i\)</span> 行除以
+<span class="math inline">\(a_{ij}\)</span>，即把 <span
+class="math inline">\(a_{ij}\)</span> 变为 <span
+class="math inline">\(1\)</span>。然后通过高斯消元法把第 <span
+class="math inline">\(j\)</span>
+列中，其他行（包括最后一行）的元素都消为零。</p></li>
+<li><p>跳转执行第 <span class="math inline">\(3\)</span> 步</p></li>
+</ol>
+<h2 id="初始基可行解">初始基可行解</h2>
+<p>在前面的讨论中，我们均是从一个初始基可行解出发，经过一系列的基变换，最终达到目标值。但是初始的基可行解应该如何确定呢？</p>
+<h3 id="特殊线性规划">特殊线性规划</h3>
+<p>对于某些特殊的问题，初始基可行解可以直接确定。
+先看一类特殊的线性规划问题。</p>
+<p>目标：<span class="math inline">\(\max：\mathbf{c^T \cdot
+x}\)</span></p>
+<p>约束：<span class="math inline">\(\mathbf{Ax \leq b}\)</span>，<span
+class="math inline">\(\mathbf{x} \geq \mathbf{0}\)</span></p>
+<p>前提条件：<span class="math inline">\(\mathbf{b} \geq
+\mathbf{0}\)</span></p>
+<p>这类问题虽然看起来好像要比标准的线性规划问题要难，实际上经过转换之后，却是最简单的场景。
+对于不等式： <span class="math display">\[
+a_1 \cdot x_1 + a_2 \cdot x_2 + ... + a_n \cdot x_n \leq b
+\]</span> 可以添加一个松弛变量，使得上述不等式变为等式：</p>
+<p><span class="math display">\[
+a_1 \cdot x_1 + a_2 \cdot x_2 + ... + a_n \cdot x_n + x_{n+1}= b
+\]</span> 其中：<span class="math inline">\(x_{n+1} \geq
+0\)</span>，<span class="math inline">\(x_{n+1}\)</span>
+叫做松弛变量。</p>
+<p>由于不等式组中有 <span class="math inline">\(m\)</span>
+个不等式，可以添加 <span class="math inline">\(m\)</span>
+个松弛变量，变成 <span class="math inline">\(m\)</span> 个方程，而添加的
+<span class="math inline">\(m\)</span>
+个松弛变量也可以作为基变量。这样就直接找到了一个基可行解。</p>
+<p>举个例子来说明：</p>
+<p><strong>例八</strong>：线性规划问题描述如下，添加松弛变量，将其转化为线性规划的标准形式。</p>
+<p>目标：<span class="math inline">\(\max：2x_1 + 3x_2 -x_3\)</span></p>
+<p>约束： <span class="math display">\[
+\begin{aligned}
+x_1 + x_3 &amp;\leq 6 \\
+x_2 + x_3 &amp;\leq 4 \\
+2x_1 + x_2 &amp;\leq 6 \\
+\end{aligned}
+\]</span> 其中：<span class="math inline">\(x_1 \geq 0,x_2 \geq 0,x_3
+\geq 0\)</span></p>
+<p><strong>解</strong>：首先通过添加松弛变量，使不等式变为等式： <span
+class="math display">\[
+\begin{aligned}
+x_1 + x_3 + &amp;x_4 &amp; &amp; &amp;= 6 \\
+x_2 + x_3 + &amp; &amp;x_5 &amp; &amp;= 4 \\
+2x_1 + x_2 + &amp; &amp; &amp;x_6 &amp;= 6 \\
+\end{aligned}
+\]</span> 其中：<span class="math inline">\(x_i \geq 0, 1 \leq i \leq
+6\)</span>。写成矩阵形式： <span class="math display">\[
+\begin{pmatrix}
+1 &amp; 0 &amp; 1 &amp; 1 &amp; 0 &amp; 0 \\
+0 &amp; 1 &amp; 1 &amp; 0 &amp; 1 &amp; 0 \\
+2 &amp; 1 &amp; 0 &amp; 0 &amp; 0 &amp; 1 \\
+\end{pmatrix}
+\cdot
+\begin{pmatrix}
+x_1 \\
+x_2 \\
+x_3 \\
+x_4 \\
+x_5 \\
+x_6 \\
+\end{pmatrix}
+=
+\begin{pmatrix}
+6 \\
+4 \\
+6 \\
+\end{pmatrix}
+\]</span> 可以看到，方程组的系数矩阵中的最右侧的 <span
+class="math inline">\(3\)</span> 列已经形成了一个单位矩阵，所以可以把
+<span class="math inline">\(x_4,x_5,x_6\)</span>
+作为基变量，得到一个基可行解：<span class="math inline">\(\mathbf{x} =
+(0,0,0,6,4,6)^T\)</span>。然后应用单纯形算法，就可以求出最优解。</p>
+<h3 id="一般线性规划">一般线性规划</h3>
+<p>对于一般线性规划问题，也可以通过类似的处理，一般有 <span
+class="math inline">\(2\)</span> 种方法，可以求得初始基可行解。一种是大
+<span class="math inline">\(M\)</span>
+法，另一种是两阶段法。以下面的例子作为说明。</p>
+<p><strong>例九</strong>：已知一般线性规划问题描述如下，求初始基可行解</p>
+<p>目标：<span class="math inline">\(\max：2x_1 + 3x_2 -x_3\)</span></p>
+<p>约束： <span class="math display">\[
+\begin{aligned}
+x_1 + x_2 + x_3 &amp;= 6 \\
+x_1 - x_2 + 2x_3 &amp;= 4 \\
+\end{aligned}
+\]</span> 其中：<span class="math inline">\(x_1 \geq 0,x_2 \geq 0,x_3
+\geq 0\)</span></p>
+<p><strong>解法一</strong>： 使用大 <span
+class="math inline">\(M\)</span> 法</p>
+<p>所谓大 <span class="math inline">\(M\)</span>
+，是一个非常大的正数，让它作为人工变量的系数，如果要让目标取值为最大，人工变量只能取值为
+<span class="math inline">\(0\)</span>。将原问题转换为以下问题：</p>
+<p>目标：<span class="math inline">\(\max：2x_1 + 3x_2 - x_3 - M \cdot(
+x_4 + x_5)\)</span></p>
+<p>约束： <span class="math display">\[
+\begin{aligned}
+&amp;x_1 + x_2 + x_3 &amp;+x_4 &amp;&amp;= 6 \\
+&amp;x_1 - x_2 + 2x_3 &amp; &amp;+x_5 &amp;= 4 \\
+\end{aligned}
+\]</span> 其中：<span class="math inline">\(x_1 \geq 0,x_2 \geq 0,x_3
+\geq 0,x_4 \geq 0,x_5 \geq 0\)</span>。</p>
+<p><span class="math inline">\(x_4\)</span> 和 <span
+class="math inline">\(x_5\)</span> 在原问题中不存在，是人工变量。由于
+<span class="math inline">\(M\)</span> 很大，要让目标值取得最大，<span
+class="math inline">\(x_4,x_5\)</span> 只能取值为 <span
+class="math inline">\(0\)</span>，所以原问题和新问题的目标取值解是一样的。在转换后的问题中，可以直接将
+<span class="math inline">\(x_4,x_5\)</span>
+作为基变量，求得初始基可行解：<span class="math inline">\(\mathbf{x} =
+(0,0,0,6,4)^T\)</span>，然后可以直接利用单纯形法求解。</p>
+<p><strong>解法二</strong>： 使用两阶段法。 在大 <span
+class="math inline">\(M\)</span>
+法中，将问题转换之后，新问题和原问题是同解的，但是多出来的大 <span
+class="math inline">\(M\)</span>，会让强迫症感觉不爽。而所谓两阶段法是首先改造原问题，对改造后的问题使用单纯形法求最优解对应的基可行解；然后把该基可行解带回到原问题，再一次使用单纯形法求解。</p>
+<p>第一阶段：改造问题</p>
+<p>目标：<span class="math inline">\(\max：-(x_4 + x_5)\)</span></p>
+<p>约束： <span class="math display">\[
+\begin{aligned}
+&amp;x_1 + x_2 + x_3 &amp;+x_4 &amp;&amp;= 6 \\
+&amp;x_1 - x_2 + 2x_3 &amp; &amp;+x_5 &amp;= 4 \\
+\end{aligned}
+\]</span> 其中：<span class="math inline">\(x_1 \geq 0,x_2 \geq 0,x_3
+\geq 0,x_4 \geq 0,x_5 \geq 0\)</span>。</p>
+<p>对于该问题，如果要使得目标函数最大，显然 <span
+class="math inline">\(x_4\)</span> 和 <span
+class="math inline">\(x_5\)</span> 只能取值为 <span
+class="math inline">\(0\)</span>。所以我们要使用单纯形法求解该情况下基可行解。
+一阶段的初始基可行解：<span class="math inline">\(\mathbf{x} =
+(0,0,0,6,4)^T\)</span>，通过单纯形法求解（步骤略）该问题可得在最优解的情况下，对应的基可行解为：<span
+class="math inline">\(\mathbf{x} = (5,1,0,0,0)^T\)</span>，即 <span
+class="math inline">\(x_1=5,x_2=1\)</span>。所以原问题的基可行解为：<span
+class="math inline">\(\mathbf{x}=(5,1,0)^T\)</span>。</p>
+<p>第二阶段：将 <span
+class="math inline">\(\mathbf{x}=(5,1,0)^T\)</span>
+作为初始基可行解，使用单纯形法求解原问题（步骤略）。</p>
+</div><div class="tags"><ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%95%B0%E5%AD%A6/" rel="tag">数学</a></li></ul></div><div class="post-nav"><a class="pre" href="/1688195692/">最长回文子串</a><a class="next" href="/1527838601/">多项式插值</a></div><div class="nofancybox" id="waline"></div><link rel="stylesheet" type="text/css" href="https://unpkg.com/@waline/client@v3/dist/waline.css"><script type="module">import {init} from 'https://unpkg.com/@waline/client@v3/dist/waline.js';
+init({
+  el: '#waline',
+  comment: true,
+  serverURL: 'https://cmts.wangyulong.cn',
+  pageSize: '30',
+  wordLimit: '500',
+  requiredMeta,
+  emoji: [
+    '//unpkg.com/@waline/emojis@1.2.0/weibo',
+    '//unpkg.com/@waline/emojis@1.2.0/qq',
+    '//unpkg.com/@waline/emojis@1.2.0/tw-emoji',
+  ],
+});</script><script>let metaInfo = ['nick', 'mail', 'link']
+let requiredMeta = ''.split(',').filter(item => {
+  return metaInfo.indexOf(item) > -1
+})
+</script></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form class="search-form" action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="http://www.wangyulong.cn"/></form></div><div class="widget"><div class="author-info"><a class="info-avatar" href="/about.html" title="关于"><img class="nofancybox" src="/img/avatar.png"/></a><p>To be a better man.</p><a class="info-icon" href="https://twitter.com/null" title="Twitter" target="_blank" style="margin-inline:5px"> <i class="fa fa-twitter-square" style="margin-inline:5px"></i></a><a class="info-icon" href="mailto:ipjmcp@gmail.com" title="Email" target="_blank" style="margin-inline:5px"> <i class="fa fa-envelope-square" style="margin-inline:5px"></i></a><a class="info-icon" href="https://github.com/wylazy" title="Github" target="_blank" style="margin-inline:5px"> <i class="fa fa-github-square" style="margin-inline:5px"></i></a><a class="info-icon" href="/atom.xml" title="RSS" target="_blank" style="margin-inline:5px"> <i class="fa fa-rss-square" style="margin-inline:5px"></i></a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/LevelDB/">LevelDB</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/Linux/">Linux</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD/">人工智能</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%95%B0%E5%AD%A6/">数学</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%AE%97%E6%B3%95/">算法</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/%E7%AE%97%E6%B3%95/" style="font-size: 15px;">算法</a> <a href="/tags/MySQL/" style="font-size: 15px;">MySQL</a> <a href="/tags/%E6%95%B0%E5%AD%A6/" style="font-size: 15px;">数学</a> <a href="/tags/Word2Vec/" style="font-size: 15px;">Word2Vec</a> <a href="/tags/Linux/" style="font-size: 15px;">Linux</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/1761284676/">Linux SSH 封禁多次登录失败 IP</a></li><li class="post-list-item"><a class="post-list-link" href="/1734076558/">从头编写 Skip-Gram Word2Vec</a></li><li class="post-list-item"><a class="post-list-link" href="/1688195692/">最长回文子串</a></li><li class="post-list-item"><a class="post-list-link" href="/1659146474/">线性规划单纯形法</a></li><li class="post-list-item"><a class="post-list-link" href="/1527838601/">多项式插值</a></li><li class="post-list-item"><a class="post-list-link" href="/1587210716/">Poj 2663 Tri Tiling</a></li><li class="post-list-item"><a class="post-list-link" href="/1534732562/">编写 MySQL 插件</a></li><li class="post-list-item"><a class="post-list-link" href="/1534732376/">MySQL 复制中对 Load Data的处理（译）</a></li><li class="post-list-item"><a class="post-list-link" href="/1534731278/">MySQL 复制协议</a></li><li class="post-list-item"><a class="post-list-link" href="/1534730601/">MySQL 5.6 中Binlog Group Commit 实现</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-comment-o"> 最近评论</i></div><div id="widget-waline-list"></div><script type="text/javascript" id="recent-comment" serverURL="https://cmts.wangyulong.cn" count="10" src="/js/recent-comments.js?v=1.0.0" async="async"></script></div><div class="widget"><div class="widget-title"><i class="fa fa-external-link"> 常用链接</i></div><ul></ul><a href="/online-tools" title="在线工具" target="_blank">在线工具</a><ul></ul><a href="/generate-password" title="密码生成" target="_blank">密码生成</a><ul></ul><a href="/webnav/" title="导航页面" target="_blank">导航页面</a></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2025 <a href="/." rel="nofollow">学而知之.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a class="show" id="rocket" href="#top"></a><script type="text/javascript" src="/js/totop.js?v=1.0.0" async></script><script type="text/javascript" src="https://unpkg.com/@fancyapps/fancybox/dist/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=1.0.0" async></script><link rel="stylesheet" type="text/css" href="https://unpkg.com/@fancyapps/fancybox/dist/jquery.fancybox.min.css"><script type="text/javascript" src="/js/copycode.js?v=1.0.0" successtext="复制成功！"></script><link rel="stylesheet" type="text/css" href="/css/copycode.css?v=1.0.0"><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" async></script><script type="text/javascript" src="/js/codeblock-resizer.js?v=1.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=1.0.0"></script></div></body></html>

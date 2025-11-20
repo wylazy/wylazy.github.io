@@ -1,0 +1,439 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="content-type" content="text/html; charset=utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="telephone=no" name="format-detection"><meta name="description"><title>多项式插值 | 学而知之</title><link rel="stylesheet" type="text/css" href="/css/style.css?v=1.0.0"><link rel="stylesheet" type="text/css" href="https://unpkg.com/normalize.css"><link rel="stylesheet" type="text/css" href="https://unpkg.com/purecss/build/pure-min.css"><link rel="stylesheet" type="text/css" href="https://unpkg.com/purecss/build/grids-responsive-min.css"><link rel="stylesheet" href="https://unpkg.com/font-awesome@4.7.0/css/font-awesome.min.css"><script type="text/javascript" src="https://unpkg.com/jquery/dist/jquery.min.js"></script><link rel="icon" mask="" sizes="any" href="/favicon.ico"><link rel="Shortcut Icon" type="image/x-icon" href="/favicon.ico"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png"><link rel="alternate" type="application/atom+xml" href="/atom.xml"><script type="text/javascript" src="https://unpkg.com/clipboard/dist/clipboard.min.js"></script><script type="text/javascript" src="https://unpkg.com/toastr/build/toastr.min.js"></script><link rel="stylesheet" href="https://unpkg.com/toastr/build/toastr.min.css"><meta name="generator" content="Hexo 7.3.0"></head><body><div class="body_container"><div id="header"><div class="site-name"><h1 class="hidden">多项式插值</h1><a id="logo" href="/.">学而知之</a><p class="description"></p></div><div id="nav-menu"><a class="current" href="/."><i class="fa fa-home"> 首页</i></a><a href="/archives/"><i class="fa fa-archive"> 归档</i></a><a href="/about.html"><i class="fa fa-user"> 关于</i></a><a href="/atom.xml"><i class="fa fa-rss"> 订阅</i></a></div></div><div class="pure-g" id="layout"><div class="pure-u-1 pure-u-md-3-4"><div class="content_container"><div class="post"><h1 class="post-title">多项式插值</h1><div class="post-meta">2022-07-16<span> | </span><span class="category"><a href="/categories/%E6%95%B0%E5%AD%A6/">数学</a></span></div><a class="disqus-comment-count" href="/1527838601/#waline"><span class="waline-comment-count" id="/1527838601/"></span><span> 条评论</span></a><div class="post-content"><p>插值是一种通过已知的数据点，求新数据点的过程或方法。比如我们已经通过采样、或者实验等方式，获取到了
+<span class="math inline">\(n+1\)</span> 个不同的采样点 <span
+class="math inline">\((x_i, y_i)\)</span>，其中 <span
+class="math inline">\(x_i\)</span> 为输入，<span
+class="math inline">\(y_i\)</span> 为输出。现在遇到了一个新的输入 <span
+class="math inline">\(x_t\)</span>，如何预测对应的输出 <span
+class="math inline">\(y_t\)</span>
+呢？插值就是一种能解决此问题的方法。而多项式由于形式简单，便于计算，是最常用的插值函数。使用多项式作为插值函数，就是多项式插值。</p>
+<p>本文将介绍多项式插值的基本原理，以及常用的插值方法，其中包括了拉格朗日插值法和牛顿插值法。对于拉格朗日插值和牛顿插值，本文不仅介绍了原理，还给出了
+Python 代码的实现。虽然代码基于 numpy，但是并没有使用 numpy
+的高级特性。如果读者想替换为标准的 Python list，也是比较容易的。</p>
+<h2 id="多项式求值">1. 多项式求值</h2>
+<p>使用多项式插值，必然涉及到多项式求值问题：已知一个 <span
+class="math inline">\(n\)</span> 次多项式的表达式 <span
+class="math inline">\(f(x) = a_0 + a_1 \cdot x + a_2 \cdot x^2 + ... +
+a_n \cdot x^n\)</span>，再给一个特定的点 <span
+class="math inline">\(x\)</span>，如何计算对应的 <span
+class="math inline">\(f(x)\)</span>
+呢？当然可以直接按多项式的定义去求值，但是代码比较繁琐。这里使用霍纳法则，转换一下多项式的形式：</p>
+<p><span class="math inline">\(f(x) = (((a_n \cdot x + a_{n-1})x + ... +
+a_2)x + a_1)x + a_0\)</span>
+在使用霍纳法则迭代计算多项式时，代码会比较简洁，时间复杂度为 <span
+class="math inline">\(O(n)\)</span>。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 霍纳法则计算多项式，a 是多项式的系数，x 是给定的点</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">Polynomial</span>(<span class="params">a, x</span>):</span><br><span class="line">    r = <span class="number">0</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(a)-<span class="number">1</span>, -<span class="number">1</span>, -<span class="number">1</span>):</span><br><span class="line">        r = x * r + a[i]</span><br><span class="line">    <span class="keyword">return</span> r</span><br></pre></td></tr></table></figure>
+<h2 id="多项式插值基本思路">2. 多项式插值基本思路</h2>
+<p>回到本文刚开始的问题：已知 <span class="math inline">\(n+1\)</span>
+个不同的采样点 <span class="math inline">\((x_i, y_i)\)</span>，其中
+<span class="math inline">\(x_i\)</span> 为输入，<span
+class="math inline">\(y_i\)</span> 为输出。现在遇到了一个新的输入 <span
+class="math inline">\(x_t\)</span>，如何预测对应的输出 <span
+class="math inline">\(y_t\)</span> 呢？</p>
+<p>首先寻找一个多项式函数 <span
+class="math inline">\(f(x)\)</span>，使得 <span
+class="math inline">\(f(x)\)</span> 恰好经过这 <span
+class="math inline">\(n+1\)</span> 个点。然后假定对于任意的输入 <span
+class="math inline">\(x\)</span>，输出均为 <span
+class="math inline">\(f(x)\)</span>。最后对于给定的输入 <span
+class="math inline">\(x_t\)</span>，按照假定条件，输出 <span
+class="math inline">\(y_t = f(x_t)\)</span>。</p>
+<h2 id="多项式插值原理">3. 多项式插值原理</h2>
+<p><strong>定理1：</strong> 对于 <span
+class="math inline">\(n+1\)</span> 个不同的坐标<span
+class="math inline">\((x_0, y_0)\)</span>，<span
+class="math inline">\((x_1, y_1)\)</span>...，<span
+class="math inline">\((x_n, y_n)\)</span>。存在一个唯一的不超过 <span
+class="math inline">\(n\)</span> 次的多项式，恰好经过这 <span
+class="math inline">\(n+1\)</span> 个点。</p>
+<p><strong>证明：</strong> 使用待定系数法，设多项式为： <span
+class="math inline">\(f(x) = a_0 + a_1 \cdot x + a_2 \cdot x^2 + ... +
+a_n \cdot x^n\)</span>，由于 <span class="math inline">\(f(x)\)</span>
+经过这 <span class="math inline">\(n+1\)</span> 个点。将 <span
+class="math inline">\((x_i, y_i)\)</span> 坐标带入 <span
+class="math inline">\(f(x)\)</span> 的表达式，可构建如下方程组 <span
+class="math display">\[
+f(x_0) = a_0 + a_1 \cdot x_0 + a_2 \cdot x_0^2 + ... + a_n \cdot x_0^n =
+y_0 \\
+f(x_1) = a_0 + a_1 \cdot x_1 + a_2 \cdot x_1^2 + ... + a_n \cdot x_1^n =
+y_1 \\
+... \\
+f(x_n) = a_0 + a_1 \cdot x_n + a_2 \cdot x_n^2 + ... + a_n \cdot x_n^n =
+y_n
+\]</span> 写成矩阵形式 <span class="math inline">\(\mathbf{X a} =
+\mathbf{y}\)</span>，其中 <span class="math inline">\(\mathbf{a} = (a_0,
+a_1, a_2, ..., a_n)^\mathrm{T}\)</span>，<span
+class="math inline">\(\mathbf{y} = (y_0, y_1, y_2, ...,
+y_n)^\mathrm{T}\)</span>，<span
+class="math inline">\(\mathbf{X}\)</span> 是一个 <span
+class="math inline">\((n+1) \times (n+1)\)</span> 的矩阵。</p>
+<p><span class="math display">\[
+\begin{pmatrix}
+1  &amp;  x_0      &amp; x_0^2  &amp; \cdot  &amp; x_0^n \\
+1  &amp;  x_1      &amp; x_1^2  &amp; \cdot  &amp; x_1^n \\
+1  &amp;  x_2      &amp; x_2^2  &amp; \cdot  &amp; x_2^n \\
+\cdot  &amp;\cdot  &amp; \cdot  &amp; \cdot  &amp; \cdot \\
+1  &amp;  x_n      &amp; x_n^2  &amp; \cdot  &amp; x_n^n
+\end{pmatrix}
+\cdot
+\begin{pmatrix}
+a_0 \\
+a_1 \\
+a_2 \\
+\cdot \\
+a_n
+\end{pmatrix}
+=
+\begin{pmatrix}
+y_0 \\
+y_1 \\
+y_2 \\
+\cdot \\
+y_n
+\end{pmatrix}
+\]</span></p>
+<p>可以看出，<span class="math inline">\(\mathbf{X}\)</span>
+是一个范德蒙矩阵，行列式不为 <span
+class="math inline">\(0\)</span>，所以该方程组有唯一解：<span
+class="math inline">\(\mathbf{a} = \mathbf{X}^{-1}\mathbf{y}\)</span>。
+所以存在一个唯一的多项式，经过这 <span
+class="math inline">\(n+1\)</span> 个点。</p>
+<p>虽然可以使用高斯消元法对范德蒙矩阵矩阵求逆，进而求出多项式插值函数，但是该方法计算的复杂度比较高，时间复杂度为
+<span
+class="math inline">\(O(n^3)\)</span>，而且精度不高，实际很少使用。更常用的方法是拉格朗日插值和牛顿插值。由定理
+1
+可知，不管使用什么方法，最终的插值多项式都是一样的，只是计算的复杂程度不同而已。</p>
+<h2 id="拉格朗日插值">4. 拉格朗日插值</h2>
+<p>拉格朗日使用构造法来构造多项式插值函数。基本思想是寻找 <span
+class="math inline">\(n+1\)</span> 个多项式基函数，其中第 <span
+class="math inline">\(i\)</span> 个基函数在 <span
+class="math inline">\(x_i\)</span> 处取值为 <span
+class="math inline">\(1\)</span>，在其他 <span
+class="math inline">\(x_j\)</span> 处 (<span class="math inline">\(j
+\neq i\)</span>) 取值为 <span class="math inline">\(0\)</span>。即第
+<span class="math inline">\(i (0 \leq i \leq n)\)</span> 个多项式基函数
+<span class="math inline">\(\omega_i(x)\)</span> 满足如下特性：</p>
+<p><span class="math display">\[
+\omega_i(x_k) = \left\{
+  \begin{aligned}
+  &amp;1 , i = k \\
+  &amp;0 , i \neq k
+  \end{aligned}
+\right.
+\]</span></p>
+<p>构造多项式函数 <span class="math inline">\(f(x) =
+\sum\limits_{i=1}^{n}y_i \cdot {\omega_i(x)}\)</span>，那么显然函数
+<span class="math inline">\(f(x)\)</span> 满足插值点 <span
+class="math inline">\(f(x_i) = y_i\)</span>。由于每个基函数 <span
+class="math inline">\(\omega_i(x)\)</span> 是一个关于 <span
+class="math inline">\(x\)</span> 的 <span
+class="math inline">\(n\)</span> 次多项式，所以 <span
+class="math inline">\(f(x)\)</span> 也一个关于 <span
+class="math inline">\(x\)</span> 的 <span
+class="math inline">\(n\)</span>
+次多项式。关键的问题是如何寻找基函数。</p>
+<p>对于 <span class="math inline">\(i (0 \leq i \leq
+n)\)</span>，拉格朗日选取的第 <span class="math inline">\(i\)</span>
+个基函数： <span class="math inline">\(\displaystyle \omega_i(x) =
+\prod\limits_{j=0, j \neq i}^{j=n}
+\frac{(x-x_j)}{(x_i-x_j)}\)</span>。</p>
+<p>可以看到，基函数 <span class="math inline">\(\omega_i(x)\)</span>
+是一个关于 <span class="math inline">\(x\)</span> 的 <span
+class="math inline">\(n\)</span>
+次多项式。下面验证一下是否满足基函数特性。将 <span
+class="math inline">\(x_i\)</span> 带入第 <span
+class="math inline">\(i\)</span> 个基函数可得：</p>
+<p><span class="math inline">\(\displaystyle \omega_i(x_i) =
+\prod\limits_{j=0,j \neq i}^{j=n}
+\frac{(x_i-x_j)}{(x_i-x_j)}\)</span>，约分后，可得 <span
+class="math inline">\(\omega_i(x_i) = 1\)</span></p>
+<p>对于<span class="math inline">\(k \neq i\)</span> 且 <span
+class="math inline">\(0 \leq k \leq n\)</span>，将 <span
+class="math inline">\(x_k\)</span> 带入第 <span
+class="math inline">\(i\)</span> 个基函数可得： <span
+class="math inline">\(\displaystyle \omega_i(x_k) = \prod\limits_{j=0,j
+\neq i}^{j=n} \frac{(x_k-x_j)}{(x_i-x_j)}\)</span>。</p>
+<p>在该式中，分子中必然存在一个 <span class="math inline">\(j\)</span>
+使得 <span class="math inline">\(k = j\)</span>，即<span
+class="math inline">\(x_k - x_j = 0\)</span>，那么分子的乘积也为 <span
+class="math inline">\(0\)</span>，即 <span
+class="math inline">\(\omega_i(x_k) =
+0\)</span>，所以满足基函数特性。</p>
+<p>拉格朗日多项式插值函数表达式为：<span class="math inline">\(f(x) =
+\sum\limits_{i=1}^{n}y_i \cdot {\omega_i(x)}\)</span></p>
+<h3 id="举例">举例</h3>
+<p>以上的介绍有些抽象，看一个例子就会清晰一些。假设有 <span
+class="math inline">\(3\)</span> 个点 <span
+class="math inline">\((1,2)\)</span>，<span
+class="math inline">\((3,12)\)</span>，<span
+class="math inline">\((4,23)\)</span>，求一个二次函数 <span
+class="math inline">\(y = a_0 + a_1 \cdot x + a_2 \cdot x^2\)</span>
+经过这 <span class="math inline">\(3\)</span> 个点。首先找到 3
+个拉格朗日基：</p>
+<p><span class="math inline">\(\displaystyle \omega_0(x) =
+\frac{x-x_1}{x_0-x_1} \cdot \frac{x-x_2}{x_0-x_2} = \frac{x-3}{1-3}
+\cdot \frac{x-4}{1-4} = \frac{(x-3)(x-4)}{6}\)</span></p>
+<p><span class="math inline">\(\displaystyle \omega_1(x) =
+\frac{x-x_0}{x_1-x_0} \cdot \frac{x-x_2}{x_1-x_2} = \frac{x-1}{3-1}
+\cdot \frac{x-4}{3-4} = -\frac{(x-1)(x-4)}{2}\)</span></p>
+<p><span class="math inline">\(\displaystyle \omega_2(x) =
+\frac{x-x_0}{x_2-x_0} \cdot \frac{x-x_1}{x_2-x_1} = \frac{x-1}{4-1}
+\cdot \frac{x-3}{4-3} = \frac{(x-1)(x-3)}{3}\)</span></p>
+<p>所以最终的表达式：</p>
+<p><span class="math display">\[
+\begin{aligned}
+f(x) &amp;= y_0 \cdot \omega_0(x) + y_1 \cdot \omega_1(x) + y_2 \cdot
+\omega_2(x) \\
+     &amp;= 2 \cdot \frac{(x-3)(x-4)}{6} + 12 \cdot
+-\frac{(x-1)(x-4)}{2} + 23 \cdot \frac{(x-1)(x-3)}{3}
+\end{aligned}
+\]</span></p>
+<p>容易验证，对于以上表达式：<span class="math inline">\(f(1) =
+2\)</span>，<span class="math inline">\(f(3) = 12\)</span>，<span
+class="math inline">\(f(4) = 23\)</span></p>
+<h3 id="python-代码">Python 代码</h3>
+<p>直接使用拉格朗日基函数的定义，来求插值函数 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">Lagrange</span>(<span class="params">X, Y</span>):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">f</span>(<span class="params">x</span>):</span><br><span class="line">        r = <span class="number">0</span></span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(Y)):</span><br><span class="line">            w = Y[i]</span><br><span class="line">            <span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(X)):</span><br><span class="line">                <span class="keyword">if</span> i == j:</span><br><span class="line">                    <span class="keyword">continue</span></span><br><span class="line">                w *= (x - X[j]) / (X[i] - X[j])</span><br><span class="line">            r += w</span><br><span class="line">        <span class="keyword">return</span> r</span><br><span class="line">    <span class="keyword">return</span> f <span class="comment"># 返回插值函数</span></span><br></pre></td></tr></table></figure></p>
+<p>测试：给定一个 <span class="math inline">\(5\)</span> 次多项式，以及
+<span class="math inline">\(6\)</span>
+个插值点，可以得到拉格朗日插值函数。再给定一个新的点，测试通过原始的多项式和插值函数计算的结果是否一样。
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">test_lagrange</span>():</span><br><span class="line">    <span class="comment"># f(x) 是一个 5 次多项式，表达式如下：</span></span><br><span class="line">    <span class="comment"># f(x) = 1 + 5 * x + 2 * x^2 + 4 * x^3 + 6 * x^4 + 3 * x^5</span></span><br><span class="line">    a = np.array([<span class="number">1</span>, <span class="number">5</span>, <span class="number">2</span>, <span class="number">4</span>, <span class="number">6</span>, <span class="number">3</span>])</span><br><span class="line">    y = Polynomial(a, <span class="number">3.5</span>)  <span class="comment"># 直接使用多项式计算 f(3.5)</span></span><br><span class="line">    <span class="built_in">print</span>(y)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 给定 6 个插值点</span></span><br><span class="line">    X = np.array([<span class="number">1</span>, <span class="number">2</span>, <span class="number">5</span>, <span class="number">7</span>, <span class="number">9</span>, <span class="number">10</span>])</span><br><span class="line">    Y = np.zeros_like(X)</span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(X)):</span><br><span class="line">        Y[i] = Polynomial(a, X[i])</span><br><span class="line"></span><br><span class="line">    f = Lagrange(X, Y) <span class="comment"># 返回拉格朗日插值函数</span></span><br><span class="line">    y = f(<span class="number">3.5</span>) <span class="comment"># 使用插值函数计算</span></span><br><span class="line">    <span class="built_in">print</span>(y)</span><br><span class="line"></span><br><span class="line">test_lagrange()</span><br></pre></td></tr></table></figure>
+拉格朗日插值虽然形式简单，便于理解，但是不具备增量特特性，即在已经计算出
+<span class="math inline">\(n\)</span>
+个点的插值函数后，如果再增加一个点， 所有基函数都要重建。</p>
+<p>如果不对插值多项式做化简，每次计算一个新的点时，时间复杂度为 <span
+class="math inline">\(O(n^2)\)</span>。</p>
+<h2 id="牛顿插值">5. 牛顿插值</h2>
+<p>牛顿插值法可以解决拉格朗日不具备增量计算的问题，解决方法是换了一组基函数。对于
+<span class="math inline">\(n+1\)</span> 个不同的点 <span
+class="math inline">\((x_0, y_0)\)</span>，<span
+class="math inline">\((x_1, y_1)\)</span>...，<span
+class="math inline">\((x_n, y_n)\)</span> ，牛顿法也是构造 <span
+class="math inline">\(n+1\)</span> 个基函数。对于上述每个点 <span
+class="math inline">\((x_i, y_i)\)</span> ，基函数需要满足如下特性：</p>
+<p><span class="math display">\[
+  \begin{aligned}
+  \sum\limits_{j=0}^{i}{a_j\phi_j(x_i)} &amp;= y_i \\
+  \sum\limits_{j=i+1}^{n}{a_j\phi_j(x_i)} &amp;= 0
+  \end{aligned}
+\]</span></p>
+<p>如果找到了这样一组基函数，那么最终插值多项式的表达式：<span
+class="math inline">\(\displaystyle f(x) =
+\sum\limits_{i=0}^{n}a_i\phi_i(x)\)</span>，根据基函数特性可得：<span
+class="math inline">\(f(x_i) = y_i\)</span>。</p>
+<p>如何寻找基函数呢，仍然是构造法。牛顿构造的第 <span
+class="math inline">\(i\)</span> 个基函数表达式如下：</p>
+<p><span class="math display">\[
+\phi_i(x) = \left\{
+  \begin{aligned}
+  &amp;1 , i = 0 \\
+  &amp;\prod\limits_{j=0}^{i-1}(x-x_j) , 1 \leq i \leq n
+  \end{aligned}
+\right.
+\]</span></p>
+<p>牛顿插值多项式中的 <span class="math inline">\(a_i\)</span>
+是待定系数，需要满足牛顿基函数特性，并不能通过观测直接得到。为了求解
+<span class="math inline">\(a_i\)</span>，首先将牛顿插值多项式展开：
+<span class="math display">\[
+\begin{aligned}
+f(x) &amp;= \phi_0(x) + \phi_1(x) + \phi_2(x) + ... + \phi_n(x) \\
+     &amp;= a_0 + a_1(x-x_0) + a_2(x-x_0)(x-x_1) + ... +
+a_n(x-x_0)(x-x_1)...(x-x_{n-1})
+\end{aligned}
+\]</span></p>
+<p>将 <span class="math inline">\(n+1\)</span> 个不同的点的坐标 <span
+class="math inline">\((x_0, y_0)\)</span>，<span
+class="math inline">\((x_1, y_1)\)</span>...，<span
+class="math inline">\((x_n, y_n)\)</span> 带入牛顿插值表达式 <span
+class="math inline">\(f(x)\)</span> 可得到以下方程组：</p>
+<p><span class="math display">\[
+\begin{array}{llll}
+  f(x_0) &amp;= a_0 &amp;= y_0 \\
+  f(x_1) &amp;= a_0 + a_1(x_1-x_0) &amp;= y_1 \\
+  f(x_2) &amp;= a_0 + a_1(x_2-x_0) + a_2(x_2-x_0)(x_2-x_1) &amp;= y_2 \\
+  ... \\
+  f(x_n) &amp;= a_0 + a_1(x_n-x_0) + a_2(x_n-x_0)(x_n-x_1) + ... +
+a_n(x_n-x_0)...(x_n-x_{n-1}) &amp;= y_n
+\end{array}
+\]</span></p>
+<p>上述方程组有 <span class="math inline">\(n+1\)</span> 个方程，<span
+class="math inline">\(n+1\)</span> 个未知量，由于这 <span
+class="math inline">\(n+1\)</span>
+个点的坐标不同，而且各个方程之间线性无关，该方程组有唯一解。虽然可以使用高斯消元法来求解，但是使用带入法更加快捷。可以先通过第一个方程求解出
+<span class="math inline">\(a_0\)</span>，然后带入到第二个方程求解 <span
+class="math inline">\(a_1\)</span>，等等以此类推直到求解出 <span
+class="math inline">\(a_n\)</span>。</p>
+<h3 id="举例-1">举例</h3>
+<p>和拉格朗日插值一样，假设有 <span class="math inline">\(3\)</span>
+个点 <span class="math inline">\((1,2)\)</span>，<span
+class="math inline">\((3,12)\)</span>，<span
+class="math inline">\((4,23)\)</span>，求一个经过这 <span
+class="math inline">\(3\)</span> 个点的二次函数。</p>
+<p>牛顿插值的二次函数的形式为：<span class="math inline">\(f(x) = a_0 +
+a_1(x-1) + a_2(x-1)(x-3)\)</span>。带入坐标之后为：</p>
+<p><span class="math inline">\(f(1) = a_0 = 2\)</span></p>
+<p><span class="math inline">\(f(3) = a_0 + a_1(3-1) = 2 + a_1(3-1) = 12
+=&gt; a_1 = 5\)</span></p>
+<p><span class="math inline">\(f(4) = a_0 + a_1(4-1) + a_2(4-1)(4-3) = 2
++ 5 \times 3 + a_2 \times 3  = 23 =&gt; a_2 = 2\)</span></p>
+<p>这样就把全部系数都求出来了，所以插值函数：<span
+class="math inline">\(f(x) = 2 + 5(x-1) + 2(x-1)(x-3)\)</span></p>
+<h3 id="编程实现">编程实现</h3>
+<p>考察一下关于 <span class="math inline">\(a_i\)</span> 的方程： <span
+class="math display">\[
+\begin{aligned}
+f(x_i) &amp;= a_0 \\
+       &amp;+ a_1(x_i-x_0) \\
+       &amp;+ a_2(x_i-x_0)(x_i-x_1) \\
+       &amp;+ ... \\
+       &amp;+ a_{i-1}(x_i-x_0)(x_i-x_1)...(x_i-x_{i-2}) \\
+       &amp;+ a_i(x_i-x_0)(x_i-x_1)...(x_i-x_{i-1})
+\end{aligned}
+\]</span></p>
+<p>变形可得： <span class="math display">\[
+\begin{aligned}
+a_i &amp;= \frac{f(x_i)-a_0}{(x_i-x_0)(x_i-x_1)...(x_i-x_{i-1})} \\
+       &amp;- \frac{a_1}{(x_i-x_1)...(x_i-x_{i-1})} \\
+       &amp;- ... \\
+       &amp;- \frac{a_2}{(x_i-x_2)...(x_i-x_{i-1})} \\
+       &amp;- \frac{a_{i-1}}{x_i-x_{i-1}}
+\end{aligned}
+\]</span></p>
+<p>仿照霍纳法则，再对上述公式变形：</p>
+<p><span class="math inline">\(a_i =
+\displaystyle(((\frac{f(x_i)-a_0}{x_i-x_0} - a_1) \frac{1}{x_i-x_1} -
+a_2) \frac{1}{x_i-x_2} - ... - a_{i-1})
+\frac{1}{x_i-x_{i-1}}\)</span></p>
+<p>这样就把系数计算出来了。对于一个未知的点 <span
+class="math inline">\(x\)</span>，如何计算 <span
+class="math inline">\(f(x)\)</span> 呢？仍然是仿霍纳法则</p>
+<p><span class="math display">\[
+\begin{aligned}
+f(x) &amp;= a_0 + a_1(x-x_0) + a_2(x-x_0)(x-x_1) + ... +
+a_n(x-x_0)(x-x_1)...(x-x_{n-1}) \\ &amp;
+      = ((a_n(x-x_{n-1}) + a_{n-1})(x-x_{n-2}) + ... + a_1)(x-x_0) + a_0
+\end{aligned}
+\]</span></p>
+<h3 id="python-代码-1">Python 代码</h3>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">Newton</span>(<span class="params">X, Y</span>):</span><br><span class="line">    a = np.zeros_like(X)</span><br><span class="line">    a = Y.copy() <span class="comment"># 初始化 a[i] = Y[i]</span></span><br><span class="line">    <span class="comment"># 计算系数 a[i]</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>, <span class="built_in">len</span>(a)):</span><br><span class="line">        <span class="keyword">for</span> j <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, i):</span><br><span class="line">            a[i] = (a[i] - a[j]) / (X[i] - X[j])</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 已知系数 a[i]， 返回插值多项式 f(x)</span></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">f</span>(<span class="params">x</span>):</span><br><span class="line">        r = a[<span class="built_in">len</span>(a) - <span class="number">1</span>]</span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(a) - <span class="number">2</span>, -<span class="number">1</span>, -<span class="number">1</span>):</span><br><span class="line">            r = r * (x - X[i]) + a[i]</span><br><span class="line">        <span class="keyword">return</span> r</span><br><span class="line">    <span class="keyword">return</span> f</span><br></pre></td></tr></table></figure>
+<p>测试：给定一个 <span class="math inline">\(5\)</span> 次多项式，以及
+<span class="math inline">\(6\)</span>
+个插值点，可以得到牛顿插值函数。再给定一个新的点，测试通过原始的多项式和插值函数计算的结果是否一样。
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">test_newton</span>():</span><br><span class="line">    <span class="comment"># f(x) 是一个 5 次多项式，表达式如下：</span></span><br><span class="line">    <span class="comment"># f(x) = 1 + 5 * x + 2 * x^2 + 4 * x^3 + 6 * x^4 + 3 * x^5</span></span><br><span class="line">    a = np.array([<span class="number">1</span>, <span class="number">5</span>, <span class="number">2</span>, <span class="number">4</span>, <span class="number">6</span>, <span class="number">3</span>])</span><br><span class="line">    y = Polynomial(a, <span class="number">3.5</span>)  <span class="comment"># 直接使用多项式计算 f(3.5)</span></span><br><span class="line">    <span class="built_in">print</span>(y)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 给定 6 个插值点</span></span><br><span class="line">    X = np.array([<span class="number">1</span>, <span class="number">2</span>, <span class="number">5</span>, <span class="number">7</span>, <span class="number">9</span>, <span class="number">10</span>])</span><br><span class="line">    Y = np.zeros_like(X)</span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(X)):</span><br><span class="line">        Y[i] = Polynomial(a, X[i])</span><br><span class="line"></span><br><span class="line">    f = Newton(X, Y) <span class="comment"># 返回牛顿插值函数</span></span><br><span class="line">    y = f(<span class="number">3.5</span>) <span class="comment"># 使用插值函数计算</span></span><br><span class="line">    <span class="built_in">print</span>(y)</span><br><span class="line"></span><br><span class="line">test_newton()</span><br></pre></td></tr></table></figure></p>
+<p>牛顿插值法有一个初始化阶段，时间复杂度为 <span
+class="math inline">\(O(n^2)\)</span>，初始化完成之后，在计算新的点对应的值时，时间复杂度为
+<span
+class="math inline">\(O(n)\)</span>。而且牛顿基函数具备增量计算特性：如果已知前
+<span class="math inline">\(n\)</span> 个基函数，再增加 1 个插值点时，前
+<span class="math inline">\(n\)</span>
+个基函数都不变，只需增加一个新的基函数即可。</p>
+<h3 id="差商">差商</h3>
+<p>虽然通过以上算法可以计算出牛顿插值基的系数，但是对于系数的物理意义并没有解释，实际上第
+<span class="math inline">\(i\)</span> 个插值基函数的系数，是第 <span
+class="math inline">\(i\)</span>
+阶差商。差商的定义是递归的，其定义如下：</p>
+<p>零阶差商：<span class="math inline">\(F[x_i] = f(x_i)\)</span></p>
+<p>一阶差商：<span class="math inline">\(\displaystyle F[x_i,x_j] =
+\frac{F[x_i] - F[x_j]}{x_i-x_j}\)</span></p>
+<p>二阶差商：<span class="math inline">\(\displaystyle F[x_i,x_k,x_j] =
+\frac{F[x_i,x_k] - F[x_k,x_j]}{x_i-x_j}\)</span></p>
+<p>...</p>
+<p><span class="math inline">\(k\)</span> 阶差商：<span
+class="math inline">\(\displaystyle F[x_i,x_{i+1},...,x_{i+k}] =
+\frac{F[x_i,x_{i+1}, ..., x_{k-1}] - F[x_{i+1},x_{i+2}, ...,
+x_{i+k}]}{x_i-x_{i+k}}\)</span></p>
+<p>为了得到插值函数 <span class="math inline">\(f(x)\)</span>
+和差商的关系，可以按阶从低到高考察差商函数。</p>
+<p>考察一阶差商函数：<span class="math inline">\(\displaystyle F[x, x_0]
+= \frac{F[x] - F[x_0]}{x-x_0}\)</span>， 变形可得： <span
+class="math display">\[
+F[x] = F[x_0] + (F[x] - F[x_0])(x-x_0)
+\]</span></p>
+<p>由于零阶差商： <span class="math inline">\(F[x] =
+f(x)\)</span>，替换之后可得： <span class="math display">\[
+f(x) = F[x_0] + (F[x] - F[x_0])(x-x_0)
+\]</span></p>
+<p>再考察二阶差商函数：</p>
+<p><span class="math display">\[
+\begin{aligned}
+F[x, x_0, x_1] &amp;= \frac{F[x,x_0] - F[x_0,x_1]}{x-x_1}
+               &amp;= \frac{\displaystyle\frac{F[x]-F[x_0]}{x-x_0} -
+F[x_0,x_1]}{x - x_1}
+\end{aligned}
+\]</span></p>
+<p>等式左右两边同时乘以 <span
+class="math inline">\((x-x_0)(x-x_1)\)</span> 之后可得：</p>
+<p><span class="math display">\[
+F[x, x_0, x_1](x-x_0)(x-x_1) = F[x]-F[x_0] - F[x_0,x_1](x-x_0)
+\]</span> 移项并用 <span class="math inline">\(f(x)\)</span> 替换 <span
+class="math inline">\(F[x]\)</span> 得：</p>
+<p><span class="math display">\[
+f(x) = F[x_0] + F[x_0,x_1](x-x_0) + F[x, x_0, x_1](x-x_0)(x-x_1)
+\]</span></p>
+<p>...</p>
+<p>一步一步替换之后，最终可得： <span class="math display">\[
+\begin{aligned}
+f(x) &amp;= F[x_0] \\
+     &amp;+ F[x_0,x_1](x-x_0) \\
+     &amp;+ F[x_0, x_1, x_2](x-x_0)(x-x_1) \\
+     &amp;+ ... \\
+     &amp;+ F[x_0, x_1, ..., x_{n}](x-x_0)(x-x_1)...(x-x_{n-1}) \\
+     &amp;+ F[x, x_1, ..., x_{n-1}, x_{n}](x-x_1)...(x-x_{n-1})(x-x_n)
+\end{aligned}
+\]</span> 以上是推导过程，更严格的证明可以使用数学归纳法。</p>
+<p>把 <span class="math inline">\(x_0\)</span> 带入以上表达式可得</p>
+<p><span class="math display">\[f(x_0) = F[x_0] + F[x, x_1, ...,
+x_{n-1}, x_{n}](x_0-x_1)...(x_0-x_{n-1})(x_0-x_n)\]</span></p>
+<p>由于零阶差商：<span class="math inline">\(F[x_0] =
+f(x_0)\)</span>，所以 <span class="math inline">\(F[x, x_1, ...,
+x_{n-1}, x_{n}] = 0\)</span>。最终 <span
+class="math inline">\(f(x)\)</span> 的表达式如下：</p>
+<p><span class="math display">\[
+\begin{aligned}
+f(x) &amp;= F[x_0] \\
+     &amp;+ F[x_0,x_1](x-x_0) \\
+     &amp;+ F[x_0, x_1, x_2](x-x_0)(x-x_1) \\
+     &amp;+ ... \\
+     &amp;+ F[x_0, x_1, ..., x_{n}](x-x_0)(x-x_1)...(x-x_{n-1})
+\end{aligned}
+\]</span></p>
+<p>通过以上推导可以发现，牛顿插值法的系数 <span
+class="math inline">\(a_k\)</span>，其实就是 <span
+class="math inline">\(k\)</span> 阶差商 <span
+class="math inline">\(F[x_0, x_1, ..., x_k]\)</span>。</p>
+<h3 id="python-代码-2">Python 代码</h3>
+<p>首先计算 <span class="math inline">\(0\)</span>
+阶差商，然后通过递推公式，依次计算 <span
+class="math inline">\(1\)</span> 阶，<span
+class="math inline">\(2\)</span> 阶，<span
+class="math inline">\(3\)</span> 阶， ...， <span
+class="math inline">\(n\)</span>
+阶差商。差商计算出来之后，仍然使用霍纳法则计算多项式的值。
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">NewtonDivDiff</span>(<span class="params">X, Y</span>):</span><br><span class="line">    d = np.zeros([<span class="built_in">len</span>(Y), <span class="built_in">len</span>(Y)])</span><br><span class="line">    <span class="comment"># 计算 0 阶差商，这里表示为 d[i][i]</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, <span class="built_in">len</span>(Y)):</span><br><span class="line">        d[i][i] = Y[i]</span><br><span class="line"></span><br><span class="line">    <span class="comment"># k 为当前差商的阶数，先计算 1 阶，然后 2 阶，依次类推</span></span><br><span class="line">    <span class="keyword">for</span> k <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>, <span class="built_in">len</span>(Y)):</span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">0</span>, <span class="built_in">len</span>(Y) - k):</span><br><span class="line">            d[i][i+k] = (d[i][i+k-<span class="number">1</span>] - d[i+<span class="number">1</span>][i+k]) / (X[i] - X[i+k])</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 已知系数 a[i]， 计算多项式 f(x)</span></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">f</span>(<span class="params">x</span>):</span><br><span class="line">        r = d[<span class="number">0</span>][<span class="built_in">len</span>(Y) - <span class="number">1</span>]</span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(Y) - <span class="number">2</span>, -<span class="number">1</span>, -<span class="number">1</span>):</span><br><span class="line">            r = r * (x - X[i]) + d[<span class="number">0</span>][i]</span><br><span class="line">        <span class="keyword">return</span> r</span><br><span class="line">    <span class="keyword">return</span> f</span><br></pre></td></tr></table></figure></p>
+<p>可以看到，直接使用差商的定义和前面求解的方式代码是相似的，二者的时间复杂度是一样的，都是
+<span
+class="math inline">\(O(n)\)</span>。直接求解时，代码更加简洁，空间复杂度为
+<span
+class="math inline">\(O(n)\)</span>，而使用差商定义时，需要用一个二维的数组，空间复杂度为
+<span
+class="math inline">\(O(n^2)\)</span>，要高一些。但是使用差商的定义，物理意义更加明确一些。</p>
+<h2 id="总结">总结</h2>
+<p>本文介绍了一般的多项式插值、拉格朗日插值以及牛顿插值，不仅介绍了原理，还给出了
+Python 代码的实现，可以供读者研究使用。虽然通过定理 1
+可以知道，多项式插值最终的表达式是一样的，但是使用不同的插值方法其算法复杂程度是不一样的。一般多项式插值的算法复杂度最高，拉格朗日插值算法复杂度稍低，牛顿插值算法复杂度最低。$$</p>
+</div><div class="tags"><ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/%E6%95%B0%E5%AD%A6/" rel="tag">数学</a></li></ul></div><div class="post-nav"><a class="pre" href="/1659146474/">线性规划单纯形法</a><a class="next" href="/1587210716/">Poj 2663 Tri Tiling</a></div><div class="nofancybox" id="waline"></div><link rel="stylesheet" type="text/css" href="https://unpkg.com/@waline/client@v3/dist/waline.css"><script type="module">import {init} from 'https://unpkg.com/@waline/client@v3/dist/waline.js';
+init({
+  el: '#waline',
+  comment: true,
+  serverURL: 'https://cmts.wangyulong.cn',
+  pageSize: '30',
+  wordLimit: '500',
+  requiredMeta,
+  emoji: [
+    '//unpkg.com/@waline/emojis@1.2.0/weibo',
+    '//unpkg.com/@waline/emojis@1.2.0/qq',
+    '//unpkg.com/@waline/emojis@1.2.0/tw-emoji',
+  ],
+});</script><script>let metaInfo = ['nick', 'mail', 'link']
+let requiredMeta = ''.split(',').filter(item => {
+  return metaInfo.indexOf(item) > -1
+})
+</script></div></div></div><div class="pure-u-1-4 hidden_mid_and_down"><div id="sidebar"><div class="widget"><form class="search-form" action="//www.google.com/search" method="get" accept-charset="utf-8" target="_blank"><input type="text" name="q" maxlength="20" placeholder="Search"/><input type="hidden" name="sitesearch" value="http://www.wangyulong.cn"/></form></div><div class="widget"><div class="author-info"><a class="info-avatar" href="/about.html" title="关于"><img class="nofancybox" src="/img/avatar.png"/></a><p>To be a better man.</p><a class="info-icon" href="https://twitter.com/null" title="Twitter" target="_blank" style="margin-inline:5px"> <i class="fa fa-twitter-square" style="margin-inline:5px"></i></a><a class="info-icon" href="mailto:ipjmcp@gmail.com" title="Email" target="_blank" style="margin-inline:5px"> <i class="fa fa-envelope-square" style="margin-inline:5px"></i></a><a class="info-icon" href="https://github.com/wylazy" title="Github" target="_blank" style="margin-inline:5px"> <i class="fa fa-github-square" style="margin-inline:5px"></i></a><a class="info-icon" href="/atom.xml" title="RSS" target="_blank" style="margin-inline:5px"> <i class="fa fa-rss-square" style="margin-inline:5px"></i></a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-folder-o"> 分类</i></div><ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/LevelDB/">LevelDB</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/Linux/">Linux</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD/">人工智能</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E6%95%B0%E5%AD%A6/">数学</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/%E7%AE%97%E6%B3%95/">算法</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-star-o"> 标签</i></div><div class="tagcloud"><a href="/tags/%E7%AE%97%E6%B3%95/" style="font-size: 15px;">算法</a> <a href="/tags/MySQL/" style="font-size: 15px;">MySQL</a> <a href="/tags/%E6%95%B0%E5%AD%A6/" style="font-size: 15px;">数学</a> <a href="/tags/Word2Vec/" style="font-size: 15px;">Word2Vec</a> <a href="/tags/Linux/" style="font-size: 15px;">Linux</a></div></div><div class="widget"><div class="widget-title"><i class="fa fa-file-o"> 最近文章</i></div><ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/1761284676/">Linux SSH 封禁多次登录失败 IP</a></li><li class="post-list-item"><a class="post-list-link" href="/1734076558/">从头编写 Skip-Gram Word2Vec</a></li><li class="post-list-item"><a class="post-list-link" href="/1688195692/">最长回文子串</a></li><li class="post-list-item"><a class="post-list-link" href="/1659146474/">线性规划单纯形法</a></li><li class="post-list-item"><a class="post-list-link" href="/1527838601/">多项式插值</a></li><li class="post-list-item"><a class="post-list-link" href="/1587210716/">Poj 2663 Tri Tiling</a></li><li class="post-list-item"><a class="post-list-link" href="/1534732562/">编写 MySQL 插件</a></li><li class="post-list-item"><a class="post-list-link" href="/1534732376/">MySQL 复制中对 Load Data的处理（译）</a></li><li class="post-list-item"><a class="post-list-link" href="/1534731278/">MySQL 复制协议</a></li><li class="post-list-item"><a class="post-list-link" href="/1534730601/">MySQL 5.6 中Binlog Group Commit 实现</a></li></ul></div><div class="widget"><div class="widget-title"><i class="fa fa-comment-o"> 最近评论</i></div><div id="widget-waline-list"></div><script type="text/javascript" id="recent-comment" serverURL="https://cmts.wangyulong.cn" count="10" src="/js/recent-comments.js?v=1.0.0" async="async"></script></div><div class="widget"><div class="widget-title"><i class="fa fa-external-link"> 常用链接</i></div><ul></ul><a href="/online-tools" title="在线工具" target="_blank">在线工具</a><ul></ul><a href="/generate-password" title="密码生成" target="_blank">密码生成</a><ul></ul><a href="/webnav/" title="导航页面" target="_blank">导航页面</a></div></div></div><div class="pure-u-1 pure-u-md-3-4"><div id="footer">Copyright © 2025 <a href="/." rel="nofollow">学而知之.</a> Powered by<a rel="nofollow" target="_blank" href="https://hexo.io"> Hexo.</a><a rel="nofollow" target="_blank" href="https://github.com/tufu9441/maupassant-hexo"> Theme</a> by<a rel="nofollow" target="_blank" href="https://github.com/pagecho"> Cho.</a></div></div></div><a class="show" id="rocket" href="#top"></a><script type="text/javascript" src="/js/totop.js?v=1.0.0" async></script><script type="text/javascript" src="https://unpkg.com/@fancyapps/fancybox/dist/jquery.fancybox.min.js" async></script><script type="text/javascript" src="/js/fancybox.js?v=1.0.0" async></script><link rel="stylesheet" type="text/css" href="https://unpkg.com/@fancyapps/fancybox/dist/jquery.fancybox.min.css"><script type="text/javascript" src="/js/copycode.js?v=1.0.0" successtext="复制成功！"></script><link rel="stylesheet" type="text/css" href="/css/copycode.css?v=1.0.0"><script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML" async></script><script type="text/javascript" src="/js/codeblock-resizer.js?v=1.0.0"></script><script type="text/javascript" src="/js/smartresize.js?v=1.0.0"></script></div></body></html>
